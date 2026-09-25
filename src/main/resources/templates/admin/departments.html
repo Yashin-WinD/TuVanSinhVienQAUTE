@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/header :: header('Quản lý Khoa & Lĩnh vực - QAUTE Admin')}">
+</head>
+<body class="d-flex flex-column min-vh-100">
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+    <div class="container-fluid flex-grow-1">
+        <div class="row">
+            <div class="col-md-3 col-lg-2 p-0">
+                <div th:replace="~{fragments/sidebar-admin :: sidebar('departments')}"></div>
+            </div>
+
+            <div class="col-md-9 col-lg-10 p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4 class="fw-bold text-dark mb-0"><i class="bi bi-building me-2 text-primary"></i>Quản Lý Khoa, Phòng Ban & Lĩnh Vực Tư Vấn</h4>
+                </div>
+
+                <div class="row g-4">
+                    <!-- Danh sách Khoa & Fields -->
+                    <div class="col-lg-7">
+                        <div class="card card-custom p-3 mb-4" th:each="d : ${departments}">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div>
+                                    <span class="badge bg-primary fs-6 me-2" th:text="${d.code}">CTSV</span>
+                                    <strong class="fs-5 text-dark" th:text="${d.name}">Tên Khoa</strong>
+                                </div>
+                                <small class="text-muted"><i class="bi bi-telephone me-1"></i><span th:text="${d.hotline}">Hotline</span></small>
+                            </div>
+                            <p class="text-muted small mb-3" th:text="${d.description}">Mô tả</p>
+
+                            <h6 class="fw-bold text-secondary mb-2 small text-uppercase">Các lĩnh vực tư vấn:</h6>
+                            <ul class="list-group list-group-flush mb-2">
+                                <li class="list-group-item d-flex justify-content-between align-items-center py-2" th:each="f : ${d.fields}">
+                                    <div>
+                                        <i class="bi bi-check2-circle text-success me-2"></i>
+                                        <span class="fw-semibold" th:text="${f.name}">Tên lĩnh vực</span>
+                                        <small class="text-muted d-block ms-4" th:text="${f.description}">Mô tả</small>
+                                    </div>
+                                </li>
+                                <li class="list-group-item text-muted fst-italic py-2" th:if="${#lists.isEmpty(d.fields)}">
+                                    Chưa có lĩnh vực tư vấn nào được cấu hình.
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Thêm mới Khoa & Lĩnh vực -->
+                    <div class="col-lg-5">
+                        <!-- Thêm Khoa mới -->
+                        <div class="card card-custom p-4 mb-4 shadow-sm">
+                            <h5 class="fw-bold text-primary mb-3"><i class="bi bi-plus-circle me-1"></i>Thêm Khoa / Phòng Ban Mới</h5>
+                            <form th:action="@{/admin/departments}" th:object="${newDepartment}" method="post">
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Mã viết tắt (Unique)</label>
+                                    <input type="text" class="form-control" th:field="*{code}" placeholder="vd: CTSV, FIT, KINHTE..." required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Tên đầy đủ</label>
+                                    <input type="text" class="form-control" th:field="*{name}" placeholder="vd: Phòng Công tác Sinh viên" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Email tiếp nhận</label>
+                                    <input type="email" class="form-control" th:field="*{email}" placeholder="ctsv@hcmute.edu.vn">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Hotline / Số máy bàn</label>
+                                    <input type="text" class="form-control" th:field="*{hotline}" placeholder="028.38968641">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Mô tả chức năng</label>
+                                    <textarea class="form-control" th:field="*{description}" rows="2"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100 fw-bold">Tạo Phòng Ban Mới</button>
+                            </form>
+                        </div>
+
+                        <!-- Thêm Lĩnh vực tư vấn -->
+                        <div class="card card-custom p-4 shadow-sm">
+                            <h5 class="fw-bold text-success mb-3"><i class="bi bi-plus-circle me-1"></i>Thêm Lĩnh Vực Tư Vấn</h5>
+                            <form th:action="@{/admin/fields}" method="post">
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Thuộc Khoa / Phòng ban</label>
+                                    <select class="form-select" name="departmentId" required>
+                                        <option value="">-- Chọn đơn vị trực thuộc --</option>
+                                        <option th:each="d : ${departments}" th:value="${d.id}" th:text="${d.name}"></option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Tên lĩnh vực</label>
+                                    <input type="text" class="form-control" name="name" placeholder="vd: Học bổng & Học phí" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Mô tả hướng dẫn sinh viên</label>
+                                    <textarea class="form-control" name="description" rows="2" placeholder="Ghi chú hướng dẫn cho sinh viên chọn đúng..."></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-success w-100 fw-bold">Tạo Lĩnh Vực</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+    <div th:replace="~{fragments/scripts :: scripts}"></div>
+</body>
+</html>

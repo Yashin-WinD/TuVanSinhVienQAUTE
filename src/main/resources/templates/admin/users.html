@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/header :: header('Quản lý người dùng - QAUTE Admin')}">
+</head>
+<body class="d-flex flex-column min-vh-100">
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+    <div class="container-fluid flex-grow-1">
+        <div class="row">
+            <div class="col-md-3 col-lg-2 p-0">
+                <div th:replace="~{fragments/sidebar-admin :: sidebar('users')}"></div>
+            </div>
+
+            <div class="col-md-9 col-lg-10 p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4 class="fw-bold text-dark mb-0"><i class="bi bi-people-fill me-2 text-primary"></i>Quản Lý Tài Khoản Người Dùng</h4>
+                </div>
+
+                <ul class="nav nav-pills mb-3" id="userTabs" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link active fw-semibold" id="students-tab" data-bs-toggle="pill" data-bs-target="#students">
+                            <i class="bi bi-person-lines-fill me-1"></i>Sinh viên (<span th:text="${#lists.size(students)}">0</span>)
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link fw-semibold" id="lecturers-tab" data-bs-toggle="pill" data-bs-target="#lecturers">
+                            <i class="bi bi-person-workspace me-1"></i>Giảng viên / Cố vấn (<span th:text="${#lists.size(lecturers)}">0</span>)
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+                    <!-- Tab Sinh viên -->
+                    <div class="tab-pane fade show active" id="students">
+                        <div class="card card-custom">
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>MSSV</th>
+                                                <th>Họ và tên</th>
+                                                <th>Username</th>
+                                                <th>Email</th>
+                                                <th>Điện thoại</th>
+                                                <th>Trạng thái</th>
+                                                <th>Thao tác</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr th:each="s : ${students}">
+                                                <td><strong th:text="${s.userCode}">21110001</strong></td>
+                                                <td>
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <img th:src="${s.avatarUrl != null ? s.avatarUrl : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'}" 
+                                                             class="avatar-circle" alt="Avatar">
+                                                        <span class="fw-semibold" th:text="${s.fullName}">Tên</span>
+                                                    </div>
+                                                </td>
+                                                <td th:text="${s.username}">user</td>
+                                                <td th:text="${s.email}">email</td>
+                                                <td th:text="${s.phone}">phone</td>
+                                                <td>
+                                                    <span th:if="${s.isActive}" class="badge bg-success">Hoạt động</span>
+                                                    <span th:unless="${s.isActive}" class="badge bg-danger">Bị khóa</span>
+                                                </td>
+                                                <td>
+                                                    <form th:action="@{/admin/users/{id}/toggle-status(id=${s.id})}" method="post">
+                                                        <button type="submit" class="btn btn-sm" th:classappend="${s.isActive ? 'btn-outline-danger' : 'btn-outline-success'}">
+                                                            <span th:text="${s.isActive ? 'Khóa' : 'Mở khóa'}">Thao tác</span>
+                                                        </button>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab Giảng viên -->
+                    <div class="tab-pane fade" id="lecturers">
+                        <div class="card card-custom">
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Mã GV</th>
+                                                <th>Họ và tên</th>
+                                                <th>Username</th>
+                                                <th>Email</th>
+                                                <th>Khoa / Phòng ban</th>
+                                                <th>Trạng thái</th>
+                                                <th>Thao tác</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr th:each="l : ${lecturers}">
+                                                <td><strong th:text="${l.userCode}">GV001</strong></td>
+                                                <td>
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <img th:src="${l.avatarUrl != null ? l.avatarUrl : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'}" 
+                                                             class="avatar-circle" alt="Avatar">
+                                                        <span class="fw-semibold" th:text="${l.fullName}">Tên</span>
+                                                    </div>
+                                                </td>
+                                                <td th:text="${l.username}">user</td>
+                                                <td th:text="${l.email}">email</td>
+                                                <td>
+                                                    <span class="badge bg-primary" th:text="${l.department != null ? l.department.name : 'Chưa gán'}">Khoa</span>
+                                                </td>
+                                                <td>
+                                                    <span th:if="${l.isActive}" class="badge bg-success">Hoạt động</span>
+                                                    <span th:unless="${l.isActive}" class="badge bg-danger">Bị khóa</span>
+                                                </td>
+                                                <td>
+                                                    <form th:action="@{/admin/users/{id}/toggle-status(id=${l.id})}" method="post">
+                                                        <button type="submit" class="btn btn-sm" th:classappend="${l.isActive ? 'btn-outline-danger' : 'btn-outline-success'}">
+                                                            <span th:text="${l.isActive ? 'Khóa' : 'Mở khóa'}">Thao tác</span>
+                                                        </button>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+    <div th:replace="~{fragments/scripts :: scripts}"></div>
+</body>
+</html>

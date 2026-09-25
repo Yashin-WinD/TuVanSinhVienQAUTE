@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/header :: header('Quản lý FAQ - QAUTE Admin')}">
+</head>
+<body class="d-flex flex-column min-vh-100">
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+    <div class="container-fluid flex-grow-1">
+        <div class="row">
+            <div class="col-md-3 col-lg-2 p-0">
+                <div th:replace="~{fragments/sidebar-admin :: sidebar('faqs')}"></div>
+            </div>
+
+            <div class="col-md-9 col-lg-10 p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4 class="fw-bold text-dark mb-0"><i class="bi bi-question-circle-fill me-2 text-warning"></i>Quản Lý Kho Câu Hỏi Thường Gặp (FAQ)</h4>
+                </div>
+
+                <div class="row g-4">
+                    <!-- Danh sách FAQs -->
+                    <div class="col-lg-7">
+                        <div class="card card-custom">
+                            <div class="card-header card-header-custom">
+                                <span class="fs-5 fw-semibold"><i class="bi bi-list-stars me-2 text-primary"></i>Danh sách câu hỏi đang xuất bản</span>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Mã</th>
+                                                <th>Câu hỏi</th>
+                                                <th>Lĩnh vực</th>
+                                                <th>Lượt xem</th>
+                                                <th>Thao tác</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr th:if="${#lists.isEmpty(faqs)}">
+                                                <td colspan="5" class="text-center py-4 text-muted">Chưa có câu hỏi FAQ nào.</td>
+                                            </tr>
+                                            <tr th:each="faq : ${faqs}">
+                                                <td><strong th:text="'#' + ${faq.id}">#1</strong></td>
+                                                <td>
+                                                    <div class="fw-semibold text-primary" th:text="${faq.question}">Câu hỏi</div>
+                                                    <small class="text-muted text-truncate d-block" style="max-width: 300px;" th:text="${faq.answer}">Câu trả lời</small>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-light text-dark" th:text="${faq.field != null ? faq.field.name : 'Chung'}">Lĩnh vực</span>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-secondary" th:text="${faq.viewCount}">0</span>
+                                                </td>
+                                                <td>
+                                                    <form th:action="@{/admin/faqs/{id}/delete(id=${faq.id})}" method="post" onsubmit="return confirm('Bạn có chắc muốn xóa câu hỏi này?');">
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Thêm FAQ mới -->
+                    <div class="col-lg-5">
+                        <div class="card card-custom p-4 shadow-sm">
+                            <h5 class="fw-bold text-primary mb-3"><i class="bi bi-plus-circle me-1"></i>Thêm Câu Hỏi FAQ Mới</h5>
+                            <form th:action="@{/admin/faqs}" method="post">
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Lĩnh vực liên quan</label>
+                                    <select class="form-select" name="fieldId" required>
+                                        <option value="">-- Chọn lĩnh vực --</option>
+                                        <option th:each="f : ${fields}" th:value="${f.id}" th:text="${f.department.code + ' - ' + f.name}"></option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Câu hỏi</label>
+                                    <input type="text" class="form-control" name="question" placeholder="vd: Điều kiện nhận học bổng là gì?" required>
+                                </div>
+                                <div class="mb-4">
+                                    <label class="form-label fw-semibold">Câu trả lời chi tiết</label>
+                                    <textarea class="form-control" name="answer" rows="6" placeholder="Nhập nội dung giải đáp chi tiết các bước, căn cứ văn bản..." required></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100 fw-bold">Lưu Câu Hỏi FAQ</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+    <div th:replace="~{fragments/scripts :: scripts}"></div>
+</body>
+</html>
