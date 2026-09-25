@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/header :: header('Phòng chat tư vấn - QAUTE')}">
+</head>
+<body class="d-flex flex-column min-vh-100">
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+    <div class="container-fluid flex-grow-1">
+        <div class="row">
+            <div class="col-md-3 col-lg-2 p-0">
+                <div th:replace="~{fragments/sidebar-student :: sidebar('requests')}"></div>
+            </div>
+
+            <div class="col-md-9 col-lg-10 p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h4 class="fw-bold text-primary mb-0">
+                            <i class="bi bi-chat-dots-fill me-2"></i>Tư Vấn Trực Tuyến: <span th:text="${request.title}">Tiêu đề</span>
+                        </h4>
+                        <small class="text-muted">Phiếu tư vấn #<span th:text="${request.id}">1</span> | Lĩnh vực: <span th:text="${request.field.name}">Khoa</span></small>
+                    </div>
+                    <a th:href="@{/student/requests/{id}(id=${request.id})}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i>Về chi tiết phiếu
+                    </a>
+                </div>
+
+                <!-- Giao diện Chat Container -->
+                <div class="chat-container">
+                    <div class="chat-header">
+                        <div class="d-flex align-items-center gap-3">
+                            <img th:src="${request.lecturer != null && request.lecturer.avatarUrl != null ? request.lecturer.avatarUrl : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'}" 
+                                 class="avatar-circle border" alt="Avatar">
+                            <div>
+                                <h6 class="mb-0 fw-bold" th:text="${request.lecturer != null ? request.lecturer.fullName : 'Ban Cố Vấn Học Tập'}">Tên Giảng viên</h6>
+                                <small class="text-success"><i class="bi bi-circle-fill me-1" style="font-size: 8px;"></i>Đang trực tuyến (WebSocket STOMP)</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Khung tin nhắn đã tải từ DB -->
+                    <div class="chat-messages" id="chatMessages">
+                        <div th:each="msg : ${messages}" 
+                             class="message-item" 
+                             th:classappend="${msg.sender.id == currentUser.id ? 'outgoing' : 'incoming'}">
+                            <img th:src="${msg.sender.avatarUrl != null ? msg.sender.avatarUrl : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'}" 
+                                 class="avatar-circle" alt="Avatar">
+                            <div>
+                                <div class="small text-muted mb-1" th:classappend="${msg.sender.id == currentUser.id ? 'text-end' : ''}">
+                                    <strong th:text="${msg.sender.fullName}">Người gửi</strong>
+                                </div>
+                                <div class="message-bubble">
+                                    <div th:text="${msg.content}">Nội dung</div>
+                                    <div th:if="${msg.mediaUrl != null}" class="mt-2">
+                                        <a th:href="${msg.mediaUrl}" target="_blank">
+                                            <img th:src="${msg.mediaUrl}" class="message-image" alt="Đính kèm">
+                                        </a>
+                                    </div>
+                                    <div class="message-time" th:text="${#temporals.format(msg.sentAt, 'HH:mm')}">12:00</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Khung nhập tin nhắn -->
+                    <div class="chat-footer">
+                        <label for="chatFileInput" class="btn btn-outline-secondary rounded-circle" title="Gửi ảnh minh chứng">
+                            <i class="bi bi-image"></i>
+                        </label>
+                        <input type="file" id="chatFileInput" accept="image/*" style="display: none;">
+
+                        <input type="text" id="messageInput" class="form-control chat-input" 
+                               placeholder="Nhập nội dung tin nhắn trao đổi với thầy/cô..." autofocus>
+
+                        <button type="button" id="btnSendMessage" class="btn-send">
+                            <i class="bi bi-send-fill"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+    <div th:replace="~{fragments/scripts :: scripts}"></div>
+
+    <!-- Khởi tạo kết nối STOMP -->
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        const consultationId = /*[[${request.id}]]*/ 1;
+        const currentUserId = /*[[${currentUser.id}]]*/ 1;
+        const currentUserName = /*[[${currentUser.fullName}]]*/ 'Sinh viên';
+        const currentUserAvatar = /*[[${currentUser.avatarUrl}]]*/ '';
+        const currentUserRole = /*[[${currentUser.role.name()}]]*/ 'ROLE_STUDENT';
+
+        document.addEventListener('DOMContentLoaded', function () {
+            initChat(consultationId, currentUserId, currentUserName, currentUserAvatar, currentUserRole);
+        });
+        /*]]>*/
+    </script>
+</body>
+</html>
