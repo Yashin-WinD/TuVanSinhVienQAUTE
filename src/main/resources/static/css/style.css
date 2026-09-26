@@ -1,0 +1,131 @@
+:root {
+    --primary-color: #0b5ed7;
+    --primary-dark: #0a4aa9;
+    --primary-light: #e7f1ff;
+    --secondary-color: #6c757d;
+    --success-color: #198754;
+    --info-color: #0dcaf0;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --body-bg: #f4f7fc;
+    --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    --border-radius: 12px;
+}
+
+body {
+    font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+    background-color: var(--body-bg);
+    color: #2b303a;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Navbar */
+.navbar-brand {
+    font-weight: 700;
+    letter-spacing: -0.5px;
+}
+.navbar-brand .badge-ute {
+    background-color: #ffcc00;
+    color: #003366;
+    font-size: 0.75rem;
+    font-weight: 800;
+    padding: 3px 6px;
+    border-radius: 4px;
+    margin-left: 6px;
+}
+
+/* Cards & Containers */
+.card-custom {
+    background: #fff;
+    border: none;
+    border-radius: var(--border-radius);
+    box-shadow: var(--card-shadow);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card-custom:hover {
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
+}
+
+.card-header-custom {
+    background: transparent;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    padding: 1rem 1.25rem;
+    font-weight: 600;
+}
+
+/* Stat Widgets */
+.stat-card {
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+}
+.stat-card .stat-icon {
+    font-size: 2.5rem;
+    position: absolute;
+    right: 1.25rem;
+    bottom: 1.25rem;
+    opacity: 0.25;
+}
+
+/* Badges for Status */
+.badge-status-PENDING { background-color: #ffc107; color: #000; }
+.badge-status-ASSIGNED { background-color: #0dcaf0; color: #000; }
+.badge-status-IN_PROGRESS { background-color: #0d6efd; color: #fff; }
+.badge-status-RESOLVED { background-color: #198754; color: #fff; }
+.badge-status-CLOSED { background-color: #6c757d; color: #fff; }
+
+.badge-priority-LOW { background-color: #e2e3e5; color: #41464b; }
+.badge-priority-MEDIUM { background-color: #cfe2ff; color: #084298; }
+.badge-priority-HIGH { background-color: #fff3cd; color: #664d03; }
+.badge-priority-URGENT { background-color: #f8d7da; color: #842029; }
+
+/* Sidebar */
+.sidebar {
+    min-height: calc(100vh - 60px);
+    background: #ffffff;
+    border-right: 1px solid #edf2f9;
+}
+.sidebar .nav-link {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #495057;
+    padding: 0.75rem 1.25rem;
+    border-radius: 8px;
+    margin: 3px 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.2s ease;
+}
+.sidebar .nav-link:hover, .sidebar .nav-link.active {
+    background-color: var(--primary-light);
+    color: var(--primary-color);
+}
+
+/* User avatar */
+.avatar-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+.avatar-circle-lg {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #fff;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+/* Footer */
+footer {
+    margin-top: auto;
+    background-color: #fff;
+    border-top: 1px solid #e9ecef;
+    padding: 1.25rem 0;
+}
