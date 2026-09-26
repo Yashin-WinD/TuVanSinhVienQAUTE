@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="sidebar(activeMenu)" class="sidebar p-3">
+    <div class="text-center mb-4 pt-2">
+        <img th:src="${currentUser != null && currentUser.avatarUrl != null ? currentUser.avatarUrl : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}" 
+             class="avatar-circle-lg mb-2" alt="Avatar">
+        <h6 class="fw-bold mb-0" th:text="${currentUser != null ? currentUser.fullName : 'Admin'}">Quản trị viên</h6>
+        <span class="badge bg-danger">HỆ THỐNG</span>
+    </div>
+
+    <ul class="nav flex-column">
+        <li class="nav-item">
+            <a class="nav-link" th:classappend="${activeMenu == 'dashboard' ? 'active' : ''}" th:href="@{/admin/dashboard}">
+                <i class="bi bi-speedometer2"></i> Dashboard thống kê
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" th:classappend="${activeMenu == 'users' ? 'active' : ''}" th:href="@{/admin/users}">
+                <i class="bi bi-people-fill"></i> Quản lý tài khoản
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" th:classappend="${activeMenu == 'departments' ? 'active' : ''}" th:href="@{/admin/departments}">
+                <i class="bi bi-building"></i> Khoa & Lĩnh vực tư vấn
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" th:classappend="${activeMenu == 'faqs' ? 'active' : ''}" th:href="@{/admin/faqs}">
+                <i class="bi bi-question-circle-fill"></i> Quản lý FAQ
+            </a>
+        </li>
+        <li class="nav-item mt-3 pt-3 border-top">
+            <a class="nav-link text-danger" th:href="@{/logout}">
+                <i class="bi bi-box-arrow-right"></i> Đăng xuất
+            </a>
+        </li>
+    </ul>
+</div>
+</body>
+</html>
