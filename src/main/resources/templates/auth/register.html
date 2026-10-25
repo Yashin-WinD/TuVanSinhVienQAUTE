@@ -7,7 +7,7 @@
 
     <div class="container py-5 flex-grow-1 d-flex align-items-center justify-content-center">
         <div class="row w-100 justify-content-center">
-            <div class="col-md-8 col-lg-6">
+            <div class="col-md-8 col-lg-7">
                 <div class="card card-custom p-4 shadow">
                     <div class="text-center mb-4">
                         <i class="bi bi-person-plus-fill display-4 text-warning"></i>
@@ -16,6 +16,7 @@
                     </div>
 
                     <div th:if="${errorMessage != null}" class="alert alert-danger py-2 small" th:text="${errorMessage}"></div>
+                    <div th:if="${successMessage != null}" class="alert alert-success py-2 small" th:text="${successMessage}"></div>
 
                     <form th:action="@{/register}" th:object="${registerRequest}" method="post">
                         <div class="row g-3">
@@ -31,11 +32,27 @@
                                 <label class="form-label fw-semibold">Họ và tên</label>
                                 <input type="text" class="form-control" th:field="*{fullName}" placeholder="vd: Nguyễn Văn An" required>
                             </div>
-                            <div class="col-md-6">
+
+                            <!-- Email và nút gửi OTP -->
+                            <div class="col-md-7">
                                 <label class="form-label fw-semibold">Email sinh viên</label>
-                                <input type="email" class="form-control" th:field="*{email}" placeholder="vd: an.nv@student.hcmute.edu.vn" required>
+                                <div class="input-group">
+                                    <input type="email" class="form-control" id="registerEmail" th:field="*{email}" placeholder="vd: an.nv@student.hcmute.edu.vn" required>
+                                    <button type="button" class="btn btn-outline-primary fw-semibold" id="btnSendOtp" onclick="sendRegisterOtp()">
+                                        <i class="bi bi-send me-1"></i>Nhận OTP
+                                    </button>
+                                </div>
+                                <div id="otpAlert" class="small mt-1 d-none"></div>
                             </div>
-                            <div class="col-md-6">
+
+                            <!-- Ô nhập mã OTP -->
+                            <div class="col-md-5">
+                                <label class="form-label fw-semibold">Mã OTP xác thực <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control text-center fw-bold letter-spacing-1" th:field="*{otp}" placeholder="6 chữ số" maxlength="6" required>
+                                <div class="form-text text-muted" style="font-size: 11px;">Mã sẽ in ở Terminal nếu test offline</div>
+                            </div>
+
+                            <div class="col-md-12">
                                 <label class="form-label fw-semibold">Số điện thoại</label>
                                 <input type="tel" class="form-control" th:field="*{phone}" placeholder="vd: 0912345678">
                             </div>
@@ -64,5 +81,66 @@
 
     <div th:replace="~{fragments/footer :: footer}"></div>
     <div th:replace="~{fragments/scripts :: scripts}"></div>
+
+    <script>
+        function sendRegisterOtp() {
+            const emailInput = document.getElementById('registerEmail');
+            const email = emailInput ? emailInput.value.trim() : '';
+            const btnSendOtp = document.getElementById('btnSendOtp');
+            const otpAlert = document.getElementById('otpAlert');
+
+            if (!email) {
+                alert('Vui lòng nhập Email trước khi lấy mã OTP!');
+                if (emailInput) emailInput.focus();
+                return;
+            }
+
+            btnSendOtp.disabled = true;
+            btnSendOtp.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Đang gửi...';
+
+            fetch('/api/v1/auth/send-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email, purpose: 'REGISTER' })
+            })
+            .then(async res => {
+                const data = await res.json();
+                if (res.ok) {
+                    otpAlert.className = 'small mt-1 text-success fw-semibold';
+                    otpAlert.textContent = '✓ ' + (data.message || 'Mã OTP đã được gửi!');
+                    otpAlert.classList.remove('d-none');
+                    startCooldown(btnSendOtp, 60);
+                } else {
+                    otpAlert.className = 'small mt-1 text-danger fw-semibold';
+                    otpAlert.textContent = '✗ ' + (data.message || 'Không thể gửi OTP');
+                    otpAlert.classList.remove('d-none');
+                    btnSendOtp.disabled = false;
+                    btnSendOtp.innerHTML = '<i class="bi bi-send me-1"></i>Thử lại';
+                }
+            })
+            .catch(err => {
+                otpAlert.className = 'small mt-1 text-danger fw-semibold';
+                otpAlert.textContent = '✗ Lỗi kết nối máy chủ';
+                otpAlert.classList.remove('d-none');
+                btnSendOtp.disabled = false;
+                btnSendOtp.innerHTML = '<i class="bi bi-send me-1"></i>Thử lại';
+            });
+        }
+
+        function startCooldown(button, seconds) {
+            let countdown = seconds;
+            const interval = setInterval(() => {
+                countdown--;
+                if (countdown > 0) {
+                    button.disabled = true;
+                    button.innerHTML = `Gửi lại (${countdown}s)`;
+                } else {
+                    clearInterval(interval);
+                    button.disabled = false;
+                    button.innerHTML = '<i class="bi bi-send me-1"></i>Nhận OTP';
+                }
+            }, 1000);
+        }
+    </script>
 </body>
 </html>

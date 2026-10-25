@@ -6,8 +6,11 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import vn.ute.qaute.dto.request.ForgotPasswordRequest;
 import vn.ute.qaute.dto.request.LoginRequest;
 import vn.ute.qaute.dto.request.RegisterRequest;
+import vn.ute.qaute.dto.request.ResetPasswordRequest;
+import vn.ute.qaute.dto.request.SendOtpRequest;
 import vn.ute.qaute.dto.response.ApiResponse;
 import vn.ute.qaute.dto.response.AuthResponse;
 import vn.ute.qaute.service.AuthService;
@@ -34,10 +37,32 @@ public class AuthApiController {
         return ResponseEntity.ok(ApiResponse.ok("Đăng nhập thành công", authResponse));
     }
 
+    @PostMapping("/send-otp")
+    public ResponseEntity<ApiResponse<Void>> sendOtp(@Valid @RequestBody SendOtpRequest request) {
+        if ("REGISTER".equalsIgnoreCase(request.getPurpose())) {
+            authService.sendRegisterOtp(request.getEmail());
+        } else {
+            authService.sendForgotPasswordOtp(request.getEmail());
+        }
+        return ResponseEntity.ok(ApiResponse.ok("Mã xác thực OTP đã được gửi đến email của bạn! (Vui lòng kiểm tra email hoặc xem trực tiếp tại Terminal)"));
+    }
+
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<Void>> register(@Valid @RequestBody RegisterRequest request) {
         authService.registerStudent(request);
         return ResponseEntity.ok(ApiResponse.ok("Đăng ký tài khoản sinh viên thành công! Vui lòng đăng nhập."));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<Void>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        authService.sendForgotPasswordOtp(request.getEmail());
+        return ResponseEntity.ok(ApiResponse.ok("Mã OTP đặt lại mật khẩu đã được gửi đến email của bạn!"));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPasswordWithOtp(request);
+        return ResponseEntity.ok(ApiResponse.ok("Đặt lại mật khẩu thành công! Vui lòng đăng nhập bằng mật khẩu mới."));
     }
 
     @PostMapping("/logout")

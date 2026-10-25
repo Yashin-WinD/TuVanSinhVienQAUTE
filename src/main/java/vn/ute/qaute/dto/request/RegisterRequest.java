@@ -29,6 +29,9 @@ public class RegisterRequest {
     @NotBlank(message = "Mã số sinh viên không được để trống")
     private String studentCode;
 
+    @NotBlank(message = "Vui lòng nhập mã OTP xác thực")
+    private String otp;
+
     public RegisterRequest() {
     }
 
@@ -86,5 +89,13 @@ public class RegisterRequest {
 
     public void setStudentCode(String studentCode) {
         this.studentCode = studentCode;
+    }
+
+    public String getOtp() {
+        return otp;
+    }
+
+    public void setOtp(String otp) {
+        this.otp = otp;
     }
 }

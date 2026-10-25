@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.ute.qaute.dto.request.LoginRequest;
 import vn.ute.qaute.dto.request.RegisterRequest;
+import vn.ute.qaute.dto.request.ResetPasswordRequest;
 import vn.ute.qaute.dto.response.AuthResponse;
 import vn.ute.qaute.entity.User;
 import vn.ute.qaute.entity.enums.RoleType;
@@ -20,6 +21,7 @@ import vn.ute.qaute.repository.UserRepository;
 import vn.ute.qaute.security.jwt.JwtUtils;
 import vn.ute.qaute.security.service.UserDetailsImpl;
 import vn.ute.qaute.service.AuthService;
+import vn.ute.qaute.service.OtpService;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -31,16 +33,19 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
+    private final OtpService otpService;
 
     @Autowired
     public AuthServiceImpl(AuthenticationManager authenticationManager,
                            UserRepository userRepository,
                            PasswordEncoder passwordEncoder,
-                           JwtUtils jwtUtils) {
+                           JwtUtils jwtUtils,
+                           OtpService otpService) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtils = jwtUtils;
+        this.otpService = otpService;
     }
 
     @Override
@@ -81,6 +86,11 @@ public class AuthServiceImpl implements AuthService {
             throw new BadRequestException("Email đã được đăng ký");
         }
 
+        // Xác thực mã OTP trước khi tạo tài khoản
+        if (request.getOtp() == null || !otpService.verifyOtp(request.getEmail(), request.getOtp())) {
+            throw new BadRequestException("Mã OTP không chính xác hoặc đã hết hạn. Vui lòng thử lại!");
+        }
+
         User student = new User(
                 request.getUsername(),
                 passwordEncoder.encode(request.getPassword()),
@@ -94,6 +104,46 @@ public class AuthServiceImpl implements AuthService {
         student.setAvatarUrl("https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150");
 
         userRepository.save(student);
+    }
+
+    @Override
+    public void sendRegisterOtp(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            throw new BadRequestException("Email không được để trống");
+        }
+        if (userRepository.existsByEmail(email.trim())) {
+            throw new BadRequestException("Email này đã được sử dụng bởi một tài khoản khác");
+        }
+        otpService.generateAndSendOtp(email.trim(), "Đăng ký tài khoản sinh viên");
+    }
+
+    @Override
+    public void sendForgotPasswordOtp(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            throw new BadRequestException("Email không được để trống");
+        }
+        if (!userRepository.existsByEmail(email.trim())) {
+            throw new BadRequestException("Email này chưa được đăng ký trong hệ thống");
+        }
+        otpService.generateAndSendOtp(email.trim(), "Đặt lại mật khẩu");
+    }
+
+    @Override
+    @Transactional
+    public void resetPasswordWithOtp(ResetPasswordRequest request) {
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new BadRequestException("Mật khẩu xác nhận không khớp");
+        }
+
+        User user = userRepository.findByEmail(request.getEmail().trim())
+                .orElseThrow(() -> new BadRequestException("Email không tồn tại trong hệ thống"));
+
+        if (!otpService.verifyOtp(request.getEmail().trim(), request.getOtp())) {
+            throw new BadRequestException("Mã OTP không chính xác hoặc đã hết hạn");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
     }
 
     @Override
