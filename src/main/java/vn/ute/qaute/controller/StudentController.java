@@ -24,18 +24,21 @@ public class StudentController {
     private final DepartmentService departmentService;
     private final ChatService chatService;
     private final CloudinaryService cloudinaryService;
+    private final AppointmentService appointmentService;
 
     @Autowired
     public StudentController(UserService userService,
                              ConsultationService consultationService,
                              DepartmentService departmentService,
                              ChatService chatService,
-                             CloudinaryService cloudinaryService) {
+                             CloudinaryService cloudinaryService,
+                             AppointmentService appointmentService) {
         this.userService = userService;
         this.consultationService = consultationService;
         this.departmentService = departmentService;
         this.chatService = chatService;
         this.cloudinaryService = cloudinaryService;
+        this.appointmentService = appointmentService;
     }
 
     @ModelAttribute
@@ -85,10 +88,57 @@ public class StudentController {
     }
 
     @GetMapping("/requests")
-    public String requestList(@RequestParam(value = "page", defaultValue = "0") int page, Model model) {
+    public String requestList(@RequestParam(value = "page", defaultValue = "0") int page,
+                              @RequestParam(value = "status", required = false) RequestStatus status,
+                              @RequestParam(value = "fieldId", required = false) Long fieldId,
+                              @RequestParam(value = "keyword", required = false) String keyword,
+                              Model model) {
         User student = userService.getCurrentUser();
-        model.addAttribute("requestsPage", consultationService.getRequestsByStudent(student.getId(), PageRequest.of(page, 10)));
+        org.springframework.data.domain.Page<ConsultationRequest> requestsPage = consultationService.filterRequests(
+                student.getId(), null, null, fieldId, status, null, keyword, PageRequest.of(page, 10));
+        model.addAttribute("requestsPage", requestsPage);
+        model.addAttribute("fields", departmentService.getAllFields());
+        model.addAttribute("statuses", RequestStatus.values());
+        model.addAttribute("selectedStatus", status);
+        model.addAttribute("selectedFieldId", fieldId);
+        model.addAttribute("keyword", keyword);
         return "student/request-list";
+    }
+
+    @GetMapping("/appointments")
+    public String appointmentsPage(@RequestParam(value = "status", required = false) vn.ute.qaute.entity.enums.AppointmentStatus status, Model model) {
+        User student = userService.getCurrentUser();
+        java.util.List<vn.ute.qaute.entity.Appointment> appointments = appointmentService.getAppointmentsByStudentAndStatus(student.getId(), status);
+        model.addAttribute("appointments", appointments);
+        model.addAttribute("statuses", vn.ute.qaute.entity.enums.AppointmentStatus.values());
+        model.addAttribute("selectedStatus", status);
+        return "student/appointments";
+    }
+
+    @PostMapping("/appointments/{id}/confirm")
+    public String confirmAppointment(@PathVariable("id") Long id, RedirectAttributes redirectAttributes) {
+        try {
+            User student = userService.getCurrentUser();
+            appointmentService.confirmAppointment(id, student);
+            redirectAttributes.addFlashAttribute("successMessage", "Xác nhận lịch hẹn thành công!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Lỗi: " + e.getMessage());
+        }
+        return "redirect:/student/appointments";
+    }
+
+    @PostMapping("/appointments/{id}/cancel")
+    public String cancelAppointment(@PathVariable("id") Long id,
+                                    @RequestParam("reason") String reason,
+                                    RedirectAttributes redirectAttributes) {
+        try {
+            User student = userService.getCurrentUser();
+            appointmentService.cancelAppointment(id, reason, student);
+            redirectAttributes.addFlashAttribute("successMessage", "Đã gửi yêu cầu hủy/xin dời lịch hẹn thành công!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Lỗi: " + e.getMessage());
+        }
+        return "redirect:/student/appointments";
     }
 
     @GetMapping("/requests/{id}")
@@ -113,17 +163,46 @@ public class StudentController {
         return "redirect:/student/requests/" + id;
     }
 
-    @GetMapping("/chat/{id}")
-    public String chatRoom(@PathVariable("id") Long consultationId, Model model) {
+    @GetMapping("/chat")
+    public String chatBox(@RequestParam(value = "id", required = false) Long consultationId, Model model) {
         User student = userService.getCurrentUser();
-        ConsultationRequest req = consultationService.getRequestById(consultationId);
+        java.util.List<ConsultationRequest> consultations = consultationService.getRequestsByStudent(
+                student.getId(), PageRequest.of(0, 50)).getContent();
 
-        // Đánh dấu đã đọc tin nhắn
-        chatService.markMessagesAsRead(consultationId, student.getId());
+        ConsultationRequest activeRequest = null;
+        if (consultationId != null) {
+            try {
+                ConsultationRequest req = consultationService.getRequestById(consultationId);
+                if (req.getStudent().getId().equals(student.getId())) {
+                    activeRequest = req;
+                }
+            } catch (Exception ignored) {
+            }
+        }
 
-        model.addAttribute("request", req);
-        model.addAttribute("messages", chatService.getChatHistory(consultationId));
+        if (activeRequest == null && !consultations.isEmpty()) {
+            activeRequest = consultations.get(0);
+        }
+
+        if (activeRequest != null) {
+            chatService.markMessagesAsRead(activeRequest.getId(), student.getId());
+            model.addAttribute("request", activeRequest);
+            model.addAttribute("messages", chatService.getChatHistory(activeRequest.getId()));
+        } else {
+            model.addAttribute("request", null);
+            model.addAttribute("messages", java.util.Collections.emptyList());
+        }
+
+        model.addAttribute("consultations", consultations);
+        model.addAttribute("departments", departmentService.getAllDepartments());
+        model.addAttribute("fields", departmentService.getAllFields());
+        model.addAttribute("newConsultationDto", new CreateConsultationDto());
         return "student/chat";
+    }
+
+    @GetMapping("/chat/{id}")
+    public String chatRoom(@PathVariable("id") Long consultationId) {
+        return "redirect:/student/chat?id=" + consultationId;
     }
 
     @GetMapping("/profile")

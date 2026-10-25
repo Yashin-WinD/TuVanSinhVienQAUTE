@@ -14,4 +14,5 @@ public interface FaqService {
     Faq updateFaq(Long id, Faq faq);
     void deleteFaq(Long id);
     void incrementViewCount(Long id);
+    Faq createFaqFromRequest(Long requestId);
 }

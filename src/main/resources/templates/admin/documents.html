@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/header :: header('Quản lý văn bản, quy định & biểu mẫu - QAUTE Admin')}">
+</head>
+<body class="d-flex flex-column min-vh-100 bg-light">
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+    <div class="container-fluid flex-grow-1">
+        <div class="row">
+            <div class="col-md-3 col-lg-2 p-0">
+                <div th:replace="~{fragments/sidebar-admin :: sidebar('documents')}"></div>
+            </div>
+
+            <div class="col-md-9 col-lg-10 p-4">
+                <!-- Page Title -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h4 class="fw-bold text-primary mb-1">
+                            <i class="bi bi-file-earmark-text-fill me-2"></i>Quản Lý Công Văn, Quy Định & Biểu Mẫu
+                        </h4>
+                        <p class="text-muted small mb-0">Tải lên và phân loại các quy chế đào tạo, văn bản học bổng và biểu mẫu học vụ cho sinh viên.</p>
+                    </div>
+                    <button type="button" class="btn btn-primary btn-sm fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#uploadDocModal">
+                        <i class="bi bi-cloud-upload-fill me-1"></i>Tải lên tài liệu mới
+                    </button>
+                </div>
+
+                <!-- Alert Messages -->
+                <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMessage}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${errorMessage}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+
+                <!-- Filter Bar -->
+                <div class="card card-custom p-3 mb-4 border-0 shadow-sm">
+                    <form th:action="@{/admin/documents}" method="get" class="row g-2 align-items-center">
+                        <div class="col-md-7">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                                <input type="text" name="keyword" th:value="${keyword}" class="form-control border-start-0" 
+                                       placeholder="Tìm kiếm theo tiêu đề tài liệu...">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <select name="category" class="form-select">
+                                <option value="">-- Tất cả danh mục --</option>
+                                <option th:each="cat : ${categories}" th:value="${cat}" th:text="${cat.displayName}"
+                                        th:selected="${selectedCategory == cat}">Danh mục</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex gap-2">
+                            <button type="submit" class="btn btn-primary w-100 fw-semibold"><i class="bi bi-funnel-fill me-1"></i>Lọc</button>
+                            <a th:href="@{/admin/documents}" class="btn btn-outline-secondary" title="Đặt lại"><i class="bi bi-arrow-counterclockwise"></i></a>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Documents Table -->
+                <div class="card card-custom border-0 shadow-sm">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Mã</th>
+                                        <th>Tiêu đề tài liệu</th>
+                                        <th>Danh mục</th>
+                                        <th>Định dạng / Dung lượng</th>
+                                        <th>Lượt tải</th>
+                                        <th>Ngày đăng</th>
+                                        <th class="text-end pe-4">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:if="${#lists.isEmpty(documents)}">
+                                        <td colspan="7" class="text-center py-5 text-muted">
+                                            <i class="bi bi-folder-x fs-1 d-block mb-2 text-secondary"></i>
+                                            Chưa có văn bản/biểu mẫu nào trong hệ thống.
+                                        </td>
+                                    </tr>
+                                    <tr th:each="doc : ${documents}">
+                                        <td><strong class="text-secondary" th:text="'#' + ${doc.id}">#1</strong></td>
+                                        <td>
+                                            <div class="fw-bold text-dark" th:text="${doc.title}">Tiêu đề văn bản</div>
+                                            <small class="text-muted" th:text="${doc.fileName != null ? doc.fileName : '-'}">ten_file.pdf</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge" 
+                                                  th:classappend="${doc.category.name() == 'TRAINING_REGULATION' ? 'bg-danger-subtle text-danger' : 
+                                                                   (doc.category.name() == 'SCHOLARSHIP' ? 'bg-success-subtle text-success' : 
+                                                                   (doc.category.name() == 'TRAINING_POINT' ? 'bg-warning-subtle text-warning' : 
+                                                                   (doc.category.name() == 'GRADUATION' ? 'bg-info-subtle text-info' : 'bg-primary-subtle text-primary')))}"
+                                                  th:text="${doc.category.displayName}">
+                                                Danh mục
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary text-uppercase" th:text="${doc.fileType}">PDF</span>
+                                            <span class="small text-muted ms-1" th:text="${doc.formattedFileSize}">0 KB</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-light text-dark border">
+                                                <i class="bi bi-download me-1 text-primary"></i><span th:text="${doc.downloadCount}">0</span>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <small class="text-muted" th:text="${#temporals.format(doc.createdAt, 'dd/MM/yyyy HH:mm')}">Thời gian</small>
+                                        </td>
+                                        <td class="text-end pe-4">
+                                            <div class="d-flex justify-content-end gap-2">
+                                                <a th:href="${doc.fileUrl}" target="_blank" class="btn btn-sm btn-outline-primary" title="Tải / Mở tệp tin">
+                                                    <i class="bi bi-box-arrow-up-right"></i>
+                                                </a>
+                                                <form th:action="@{/admin/documents/{id}/delete(id=${doc.id})}" method="post" 
+                                                      onsubmit="return confirm('Bạn có chắc chắn muốn xóa văn bản này?');" style="display:inline;">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Xóa tài liệu">
+                                                        <i class="bi bi-trash-fill"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Document Modal -->
+    <div class="modal fade" id="uploadDocModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form th:action="@{/admin/documents}" method="post" enctype="multipart/form-data">
+                    <div class="modal-header py-3">
+                        <h5 class="modal-title fw-bold text-primary"><i class="bi bi-cloud-arrow-up me-2"></i>Tải lên văn bản / biểu mẫu mới</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Tiêu đề văn bản <span class="text-danger">*</span></label>
+                            <input type="text" name="title" class="form-control" required placeholder="vd: Quy chế đào tạo đại học chính quy 2026...">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Phân loại danh mục <span class="text-danger">*</span></label>
+                            <select name="category" class="form-select" required>
+                                <option th:each="cat : ${categories}" th:value="${cat}" th:text="${cat.displayName}">Danh mục</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Mô tả tóm tắt văn bản</label>
+                            <textarea name="description" class="form-control" rows="3" placeholder="Tóm tắt nội dung chính hoặc đối tượng áp dụng..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Chọn tệp tin đính kèm (PDF, Word, Excel...) <span class="text-danger">*</span></label>
+                            <input type="file" name="file" class="form-control" required accept=".pdf,.doc,.docx,.xls,.xlsx">
+                            <small class="text-muted">Hỗ trợ các định dạng PDF, Word, Excel. Tối đa 15MB.</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer py-2">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+                        <button type="submit" class="btn btn-primary btn-sm fw-semibold">Tải lên</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+    <div th:replace="~{fragments/scripts :: scripts}"></div>
+</body>
+</html>

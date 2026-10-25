@@ -69,8 +69,8 @@ public class SecurityConfig {
                 // Công khai tài nguyên tĩnh và tệp tin tải lên
                 .requestMatchers("/css/**", "/js/**", "/images/**", "/uploads/**", "/webjars/**", "/favicon.ico").permitAll()
                 // Công khai các trang xem chung và xác thực
-                .requestMatchers("/", "/faq", "/about", "/login", "/register", "/logout").permitAll()
-                .requestMatchers("/api/v1/auth/**").permitAll()
+                .requestMatchers("/", "/faq", "/documents/**", "/about", "/login", "/register", "/logout", "/forgot-password", "/reset-password").permitAll()
+                .requestMatchers("/api/v1/auth/**", "/api/v1/upload/**").permitAll()
                 // WebSocket endpoint
                 .requestMatchers("/ws-qaute/**").permitAll()
                 // Phân quyền theo vai trò

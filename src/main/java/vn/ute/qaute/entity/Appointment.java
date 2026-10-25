@@ -34,6 +34,9 @@ public class Appointment {
     @Column(columnDefinition = "TEXT")
     private String note;
 
+    @Column(name = "cancel_reason", columnDefinition = "TEXT")
+    private String cancelReason;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
     private AppointmentStatus status = AppointmentStatus.SCHEDULED;
@@ -123,6 +126,14 @@ public class Appointment {
 
     public void setStatus(AppointmentStatus status) {
         this.status = status;
+    }
+
+    public String getCancelReason() {
+        return cancelReason;
+    }
+
+    public void setCancelReason(String cancelReason) {
+        this.cancelReason = cancelReason;
     }
 
     public LocalDateTime getCreatedAt() {

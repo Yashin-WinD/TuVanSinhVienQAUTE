@@ -1,7 +1,6 @@
 package vn.ute.qaute.config;
 
 import com.cloudinary.Cloudinary;
-import com.cloudinary.utils.ObjectUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -21,6 +20,9 @@ public class CloudinaryConfig {
     @Value("${cloudinary.api-secret:abcdefghijk}")
     private String apiSecret;
 
+    @Value("${cloudinary.upload-preset:test1file}")
+    private String uploadPreset;
+
     @Bean
     public Cloudinary cloudinary() {
         Map<String, String> config = new HashMap<>();
@@ -29,5 +31,9 @@ public class CloudinaryConfig {
         config.put("api_secret", apiSecret);
         config.put("secure", "true");
         return new Cloudinary(config);
+    }
+
+    public String getUploadPreset() {
+        return uploadPreset;
     }
 }

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/header :: header('Tra cứu Công văn, Quy định & Biểu mẫu - QAUTE')}">
+</head>
+<body class="d-flex flex-column min-vh-100 bg-light">
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+    <main class="flex-grow-1 py-4">
+        <div class="container">
+            <!-- Header Section -->
+            <div class="card card-custom p-4 mb-4 border-0 shadow-sm" style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white;">
+                <div class="row align-items-center">
+                    <div class="col-lg-8">
+                        <h2 class="fw-bold mb-2"><i class="bi bi-file-earmark-text-fill me-2"></i>Kho Văn Bản, Quy Định & Biểu Mẫu</h2>
+                        <p class="mb-0 text-white-50">Tra cứu nhanh chóng các quy chế đào tạo, hướng dẫn học vụ, quy định học bổng, điểm rèn luyện và tải các biểu mẫu đơn từ sinh viên.</p>
+                    </div>
+                    <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+                        <span class="badge bg-white text-primary px-3 py-2 fs-6 shadow-sm">
+                            <i class="bi bi-check-circle-fill me-1"></i>Văn bản ban hành chính thức
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search and Filter Bar -->
+            <div class="card card-custom p-3 mb-4 shadow-sm border-0">
+                <form th:action="@{/documents}" method="get" class="row g-2 align-items-center">
+                    <div class="col-md-7">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                            <input type="text" name="keyword" th:value="${keyword}" class="form-control border-start-0" 
+                                   placeholder="Tìm kiếm theo tên văn bản, số hiệu, biểu mẫu...">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <select name="category" class="form-select">
+                            <option value="">-- Tất cả danh mục --</option>
+                            <option th:each="cat : ${categories}" th:value="${cat}" th:text="${cat.displayName}"
+                                    th:selected="${selectedCategory == cat}">Danh mục</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary w-100 fw-semibold"><i class="bi bi-filter me-1"></i>Lọc</button>
+                        <a th:href="@{/documents}" class="btn btn-outline-secondary" title="Xóa bộ lọc"><i class="bi bi-arrow-counterclockwise"></i></a>
+                    </div>
+                </form>
+
+                <!-- Category quick buttons -->
+                <div class="d-flex flex-wrap gap-2 mt-3 pt-3 border-top">
+                    <a th:href="@{/documents}" class="badge text-decoration-none px-3 py-2"
+                       th:classappend="${selectedCategory == null ? 'bg-primary text-white' : 'bg-light text-dark border'}">
+                        Tất cả
+                    </a>
+                    <a th:each="cat : ${categories}" th:href="@{/documents(category=${cat})}"
+                       class="badge text-decoration-none px-3 py-2"
+                       th:classappend="${selectedCategory == cat ? 'bg-primary text-white' : 'bg-light text-dark border'}"
+                       th:text="${cat.displayName}">
+                        Danh mục
+                    </a>
+                </div>
+            </div>
+
+            <!-- Documents Grid -->
+            <div class="row g-3">
+                <div th:if="${#lists.isEmpty(documents)}" class="col-12 text-center py-5">
+                    <div class="card card-custom p-5 text-muted shadow-sm">
+                        <i class="bi bi-folder-x fs-1 text-secondary mb-3"></i>
+                        <h5>Không tìm thấy văn bản hoặc biểu mẫu phù hợp</h5>
+                        <p class="small mb-0">Vui lòng thử tìm với từ khóa khác hoặc xóa bớt tiêu chí lọc.</p>
+                    </div>
+                </div>
+
+                <div th:each="doc : ${documents}" class="col-md-6 col-lg-4">
+                    <div class="card card-custom h-100 shadow-sm border-0 d-flex flex-column hover-lift">
+                        <div class="card-body p-4 d-flex flex-column">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="badge" 
+                                      th:classappend="${doc.category.name() == 'TRAINING_REGULATION' ? 'bg-danger-subtle text-danger' : 
+                                                       (doc.category.name() == 'SCHOLARSHIP' ? 'bg-success-subtle text-success' : 
+                                                       (doc.category.name() == 'TRAINING_POINT' ? 'bg-warning-subtle text-warning' : 
+                                                       (doc.category.name() == 'GRADUATION' ? 'bg-info-subtle text-info' : 'bg-primary-subtle text-primary')))}"
+                                      th:text="${doc.category.displayName}">
+                                    Danh mục
+                                </span>
+                                <span class="badge bg-secondary text-white text-uppercase" th:text="${doc.fileType}">PDF</span>
+                            </div>
+
+                            <h5 class="card-title fw-bold text-dark mt-1 mb-2" th:text="${doc.title}">Tiêu đề văn bản</h5>
+                            
+                            <p class="card-text text-muted small flex-grow-1" 
+                               th:text="${doc.description != null && !doc.description.isEmpty() ? doc.description : 'Không có mô tả chi tiết cho văn bản này.'}">
+                               Mô tả chi tiết văn bản
+                            </p>
+
+                            <div class="pt-3 border-top mt-auto">
+                                <div class="d-flex justify-content-between text-muted small mb-3">
+                                    <span><i class="bi bi-hdd me-1"></i><span th:text="${doc.formattedFileSize}">0 KB</span></span>
+                                    <span><i class="bi bi-download me-1"></i><span th:text="${doc.downloadCount}">0</span> lượt tải</span>
+                                    <span><i class="bi bi-clock me-1"></i><span th:text="${#temporals.format(doc.createdAt, 'dd/MM/yyyy')}">01/01/2026</span></span>
+                                </div>
+
+                                <div class="d-flex gap-2">
+                                    <button th:if="${doc.fileType == 'PDF'}" type="button" class="btn btn-outline-primary btn-sm flex-grow-1"
+                                            th:data-url="${doc.fileUrl}" th:data-title="${doc.title}"
+                                            onclick="openPdfModal(this.getAttribute('data-url'), this.getAttribute('data-title'))">
+                                        <i class="bi bi-eye me-1"></i>Xem trước
+                                    </button>
+                                    <a th:href="@{/documents/{id}/download(id=${doc.id})}" target="_blank" 
+                                       class="btn btn-primary btn-sm flex-grow-1 fw-semibold">
+                                        <i class="bi bi-download me-1"></i>Tải về
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- PDF Viewer Modal -->
+    <div class="modal fade" id="pdfPreviewModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered" style="height: 90vh;">
+            <div class="modal-content h-100">
+                <div class="modal-header py-2 bg-dark text-white">
+                    <h6 class="modal-title" id="pdfPreviewTitle"><i class="bi bi-file-earmark-pdf me-2 text-danger"></i>Xem trước văn bản</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0 h-100">
+                    <iframe id="pdfPreviewFrame" src="" style="width: 100%; height: 100%; border: none;"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+    <div th:replace="~{fragments/scripts :: scripts}"></div>
+
+    <script>
+        function openPdfModal(url, title) {
+            document.getElementById('pdfPreviewTitle').innerHTML = '<i class="bi bi-file-earmark-pdf me-2 text-danger"></i>' + title;
+            document.getElementById('pdfPreviewFrame').src = url;
+            new bootstrap.Modal(document.getElementById('pdfPreviewModal')).show();
+        }
+    </script>
+</body>
+</html>

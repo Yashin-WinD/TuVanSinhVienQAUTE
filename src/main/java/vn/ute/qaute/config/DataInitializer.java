@@ -7,6 +7,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import vn.ute.qaute.entity.*;
+import vn.ute.qaute.entity.enums.DocumentCategory;
 import vn.ute.qaute.entity.enums.PriorityLevel;
 import vn.ute.qaute.entity.enums.RequestStatus;
 import vn.ute.qaute.entity.enums.RoleType;
@@ -22,6 +23,7 @@ public class DataInitializer implements CommandLineRunner {
     private final ConsultationFieldRepository fieldRepository;
     private final FaqRepository faqRepository;
     private final ConsultationRequestRepository requestRepository;
+    private final DocumentRepository documentRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Autowired
@@ -30,12 +32,14 @@ public class DataInitializer implements CommandLineRunner {
                            ConsultationFieldRepository fieldRepository,
                            FaqRepository faqRepository,
                            ConsultationRequestRepository requestRepository,
+                           DocumentRepository documentRepository,
                            PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.departmentRepository = departmentRepository;
         this.fieldRepository = fieldRepository;
         this.faqRepository = faqRepository;
         this.requestRepository = requestRepository;
+        this.documentRepository = documentRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -141,6 +145,50 @@ public class DataInitializer implements CommandLineRunner {
                 sampleReq.setLecturer(gvCtsv);
                 sampleReq.setStatus(RequestStatus.ASSIGNED);
                 requestRepository.save(sampleReq);
+            }
+
+            // Tạo tài liệu mẫu
+            if (documentRepository.count() == 0) {
+                documentRepository.save(new Document(
+                        "Quy chế đào tạo học chế tín chỉ trình độ đại học",
+                        "Toàn văn quy chế đào tạo, đăng ký môn học, rút môn, xét điều kiện tốt nghiệp tại Trường ĐH Sư phạm Kỹ thuật TP.HCM.",
+                        "https://example.com/docs/Quy_che_dao_tao_tin_chi.pdf",
+                        "Quy_che_dao_tao_tin_chi.pdf",
+                        "application/pdf",
+                        2456000L,
+                        DocumentCategory.TRAINING_REGULATION,
+                        admin
+                ));
+                documentRepository.save(new Document(
+                        "Mẫu đơn xin hoãn thi / kiểm tra kết thúc học phần",
+                        "Dành cho sinh viên gặp lý do bất khả kháng (ốm đau, tai nạn, việc gia đình cấp thiết) kèm minh chứng hợp lệ.",
+                        "https://example.com/docs/Mau_don_xin_hoan_thi.pdf",
+                        "Mau_don_xin_hoan_thi.pdf",
+                        "application/pdf",
+                        315000L,
+                        DocumentCategory.STUDENT_FORM,
+                        admin
+                ));
+                documentRepository.save(new Document(
+                        "Quy định xét cấp Học bổng khuyến khích học tập",
+                        "Hướng dẫn chi tiết tiêu chuẩn xét học bổng khuyến khích học tập học kỳ chính và học bổng doanh nghiệp.",
+                        "https://example.com/docs/Quy_dinh_hoc_bong_KKHT.pdf",
+                        "Quy_dinh_hoc_bong_KKHT.pdf",
+                        "application/pdf",
+                        1120000L,
+                        DocumentCategory.SCHOLARSHIP,
+                        admin
+                ));
+                documentRepository.save(new Document(
+                        "Mẫu phiếu đánh giá điểm rèn luyện sinh viên",
+                        "Biểu mẫu tự đánh giá và thang điểm chi tiết cho các hoạt động ngoại khóa, đoàn hội và phong trào sinh viên.",
+                        "https://example.com/docs/Mau_danh_gia_diem_ren_luyen.pdf",
+                        "Mau_danh_gia_diem_ren_luyen.pdf",
+                        "application/pdf",
+                        542000L,
+                        DocumentCategory.TRAINING_POINT,
+                        admin
+                ));
             }
 
             logger.info("Dữ liệu ban đầu đã được khởi tạo hoàn tất!");

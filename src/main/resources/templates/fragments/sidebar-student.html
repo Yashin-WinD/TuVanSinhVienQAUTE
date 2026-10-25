@@ -26,6 +26,21 @@
             </a>
         </li>
         <li class="nav-item">
+            <a class="nav-link" th:classappend="${activeMenu == 'appointments' ? 'active' : ''}" th:href="@{/student/appointments}">
+                <i class="bi bi-calendar-check-fill"></i> Lịch hẹn tư vấn
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" th:classappend="${activeMenu == 'chat' ? 'active' : ''}" th:href="@{/student/chat}">
+                <i class="bi bi-chat-dots-fill"></i> Chatbox tư vấn
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" th:href="@{/documents}">
+                <i class="bi bi-file-earmark-text-fill"></i> Công văn & Biểu mẫu
+            </a>
+        </li>
+        <li class="nav-item">
             <a class="nav-link" th:classappend="${activeMenu == 'profile' ? 'active' : ''}" th:href="@{/student/profile}">
                 <i class="bi bi-person-circle"></i> Hồ sơ cá nhân
             </a>

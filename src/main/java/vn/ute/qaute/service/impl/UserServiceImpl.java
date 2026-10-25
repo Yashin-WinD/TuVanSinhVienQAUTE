@@ -110,4 +110,9 @@ public class UserServiceImpl implements UserService {
     public long countUsersByRole(RoleType role) {
         return userRepository.countByRole(role);
     }
+
+    @Override
+    public List<User> filterUsers(RoleType role, Long departmentId, Boolean isActive, String keyword) {
+        return userRepository.filterUsers(role, departmentId, isActive, keyword);
+    }
 }

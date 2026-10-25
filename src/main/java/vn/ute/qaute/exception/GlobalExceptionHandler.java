@@ -48,6 +48,32 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(errorMsg));
     }
 
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public Object handleMaxUploadSizeExceeded(org.springframework.web.multipart.MaxUploadSizeExceededException ex,
+                                             HttpServletRequest request,
+                                             Model model) {
+        String errorMsg = "Kích thước tệp tin tải lên vượt quá giới hạn cho phép (tối đa 25MB)!";
+        if (isApiRequest(request)) {
+            return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                    .body(ApiResponse.error(errorMsg));
+        }
+        model.addAttribute("errorMessage", errorMsg);
+        return "error/500";
+    }
+
+    @ExceptionHandler(org.springframework.web.multipart.MultipartException.class)
+    public Object handleMultipartException(org.springframework.web.multipart.MultipartException ex,
+                                           HttpServletRequest request,
+                                           Model model) {
+        String errorMsg = "Lỗi khi xử lý tệp tải lên: " + ex.getMessage();
+        if (isApiRequest(request)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(errorMsg));
+        }
+        model.addAttribute("errorMessage", errorMsg);
+        return "error/500";
+    }
+
     @ExceptionHandler(Exception.class)
     public Object handleGeneral(Exception ex, HttpServletRequest request, Model model) {
         if (isApiRequest(request)) {

@@ -16,6 +16,7 @@ public class User {
     @Column(nullable = false, unique = true, length = 100)
     private String username;
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
     @Column(nullable = false, length = 255)
     private String password;
 

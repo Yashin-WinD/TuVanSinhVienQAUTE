@@ -60,6 +60,16 @@ public class ConsultationRequest {
     @Column(name = "resolved_at")
     private LocalDateTime resolvedAt;
 
+    @Column(name = "forward_reason", columnDefinition = "TEXT")
+    private String forwardReason;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "forwarded_from_id")
+    private User forwardedFrom;
+
+    @Column(name = "forwarded_at")
+    private LocalDateTime forwardedAt;
+
     public ConsultationRequest() {
     }
 
@@ -198,5 +208,58 @@ public class ConsultationRequest {
 
     public void setResolvedAt(LocalDateTime resolvedAt) {
         this.resolvedAt = resolvedAt;
+    }
+
+    public String getForwardReason() {
+        return forwardReason;
+    }
+
+    public void setForwardReason(String forwardReason) {
+        this.forwardReason = forwardReason;
+    }
+
+    public User getForwardedFrom() {
+        return forwardedFrom;
+    }
+
+    public void setForwardedFrom(User forwardedFrom) {
+        this.forwardedFrom = forwardedFrom;
+    }
+
+    public LocalDateTime getForwardedAt() {
+        return forwardedAt;
+    }
+
+    public void setForwardedAt(LocalDateTime forwardedAt) {
+        this.forwardedAt = forwardedAt;
+    }
+
+    // SLA Tracking (2.4)
+    public int getSlaHours() {
+        if (priority == null) return 24;
+        switch (priority) {
+            case URGENT: return 4;
+            case HIGH: return 12;
+            case LOW: return 48;
+            case MEDIUM:
+            default: return 24;
+        }
+    }
+
+    public LocalDateTime getDeadline() {
+        if (createdAt == null) return LocalDateTime.now();
+        return createdAt.plusHours(getSlaHours());
+    }
+
+    public boolean isOverdue() {
+        if (status == RequestStatus.RESOLVED || status == RequestStatus.CLOSED) {
+            return false;
+        }
+        return LocalDateTime.now().isAfter(getDeadline());
+    }
+
+    public long getRemainingHours() {
+        if (createdAt == null) return 0;
+        return java.time.Duration.between(LocalDateTime.now(), getDeadline()).toHours();
     }
 }

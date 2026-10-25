@@ -16,6 +16,37 @@
                     <h4 class="fw-bold text-dark mb-0"><i class="bi bi-people-fill me-2 text-primary"></i>Quản Lý Tài Khoản Người Dùng</h4>
                 </div>
 
+                <!-- Filter & Search Bar -->
+                <div class="card card-custom p-3 mb-4 border-0 shadow-sm">
+                    <form th:action="@{/admin/users}" method="get" class="row g-2 align-items-center">
+                        <div class="col-md-5">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                                <input type="text" name="keyword" th:value="${keyword}" class="form-control border-start-0" 
+                                       placeholder="Tìm theo MSSV/Mã GV, họ tên, email, username...">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <select name="departmentId" class="form-select">
+                                <option value="">-- Tất cả Khoa / Đơn vị --</option>
+                                <option th:each="d : ${departments}" th:value="${d.id}" th:text="${d.name}"
+                                        th:selected="${selectedDepartmentId == d.id}">Khoa</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select name="isActive" class="form-select">
+                                <option value="">-- Trạng thái --</option>
+                                <option value="true" th:selected="${selectedIsActive == true}">Đang hoạt động</option>
+                                <option value="false" th:selected="${selectedIsActive == false}">Bị khóa</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex gap-2">
+                            <button type="submit" class="btn btn-primary w-100 fw-semibold"><i class="bi bi-funnel-fill me-1"></i>Lọc</button>
+                            <a th:href="@{/admin/users}" class="btn btn-outline-secondary" title="Đặt lại"><i class="bi bi-arrow-counterclockwise"></i></a>
+                        </div>
+                    </form>
+                </div>
+
                 <ul class="nav nav-pills mb-3" id="userTabs" role="tablist">
                     <li class="nav-item">
                         <button class="nav-link active fw-semibold" id="students-tab" data-bs-toggle="pill" data-bs-target="#students">

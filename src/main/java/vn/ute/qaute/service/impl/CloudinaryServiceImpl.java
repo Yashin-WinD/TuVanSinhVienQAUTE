@@ -5,6 +5,7 @@ import com.cloudinary.utils.ObjectUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import vn.ute.qaute.dto.response.CloudinaryResponseDto;
@@ -15,6 +16,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -24,6 +26,12 @@ public class CloudinaryServiceImpl implements CloudinaryService {
     private static final Logger logger = LoggerFactory.getLogger(CloudinaryServiceImpl.class);
 
     private final Cloudinary cloudinary;
+
+    @Value("${cloudinary.upload-preset:test1file}")
+    private String uploadPreset;
+
+    @Value("${cloudinary.cloud-name:test1}")
+    private String cloudName;
 
     @Autowired
     public CloudinaryServiceImpl(Cloudinary cloudinary) {
@@ -36,23 +44,68 @@ public class CloudinaryServiceImpl implements CloudinaryService {
             return null;
         }
 
-        try {
-            String folder = (folderName != null && !folderName.isEmpty()) ? "qaute/" + folderName : "qaute/general";
-            Map<?, ?> uploadResult = cloudinary.uploader().upload(file.getBytes(), ObjectUtils.asMap(
-                    "folder", folder,
-                    "resource_type", "auto"
-            ));
+        // Nếu thông tin Cloudinary là mẫu hoặc chưa cấu hình hợp lệ, lưu trực tiếp vào server cục bộ
+        if (cloudName == null || cloudName.trim().isEmpty() 
+                || cloudName.equalsIgnoreCase("test1") 
+                || cloudName.equalsIgnoreCase("test-cloud")
+                || cloudName.startsWith("test")) {
+            logger.info("Đang ở chế độ lưu trữ tệp cục bộ (Cloudinary: {}). Thư mục: /uploads/{}/", cloudName, folderName);
+            return saveLocally(file, folderName);
+        }
 
+        Map<String, Object> params = new HashMap<>();
+        params.put("resource_type", "auto");
+        if (folderName != null && !folderName.trim().isEmpty()) {
+            params.put("folder", "qaute/" + folderName.trim());
+        }
+
+        // Thử upload với các chế độ (Signed upload có/không preset, hoặc Unsigned upload)
+        Map<?, ?> uploadResult = null;
+        Exception lastException = null;
+
+        // 1. Thử Signed Upload (với API Key & API Secret)
+        try {
+            Map<String, Object> signedParams = new HashMap<>(params);
+            if (uploadPreset != null && !uploadPreset.trim().isEmpty()) {
+                signedParams.put("upload_preset", uploadPreset.trim());
+            }
+            uploadResult = cloudinary.uploader().upload(file.getBytes(), signedParams);
+        } catch (Exception e) {
+            lastException = e;
+            // Nếu lỗi do upload_preset xung đột với signed upload, thử signed upload không dùng preset
+            try {
+                uploadResult = cloudinary.uploader().upload(file.getBytes(), params);
+                lastException = null;
+            } catch (Exception e2) {
+                lastException = e2;
+                // Nếu vẫn lỗi và có upload_preset, thử Unsigned Upload
+                if (uploadPreset != null && !uploadPreset.trim().isEmpty()) {
+                    try {
+                        uploadResult = cloudinary.uploader().unsignedUpload(file.getBytes(), uploadPreset.trim(), params);
+                        lastException = null;
+                    } catch (Exception e3) {
+                        lastException = e3;
+                    }
+                }
+            }
+        }
+
+        if (uploadResult != null) {
             String publicId = (String) uploadResult.get("public_id");
             String secureUrl = (String) uploadResult.get("secure_url");
             String format = (String) uploadResult.get("format");
-            Long bytes = ((Number) uploadResult.get("bytes")).longValue();
+            Long bytes = uploadResult.get("bytes") != null ? ((Number) uploadResult.get("bytes")).longValue() : file.getSize();
             String resourceType = (String) uploadResult.get("resource_type");
 
-            logger.info("Tải file lên Cloudinary thành công: {}", secureUrl);
+            logger.info("Tải file lên Cloudinary THÀNH CÔNG: {}", secureUrl);
             return new CloudinaryResponseDto(publicId, secureUrl, format, bytes, resourceType);
-        } catch (Exception e) {
-            logger.warn("Không thể tải lên Cloudinary ({}). Hệ thống tự động chuyển sang lưu trữ cục bộ (Local Storage).", e.getMessage());
+        } else {
+            String errorMsg = lastException != null ? lastException.getMessage() : "Unknown Cloudinary error";
+            logger.warn("====================================================================");
+            logger.warn("KHÔNG THỂ TẢI LÊN CLOUDINARY: {}", errorMsg);
+            logger.warn("-> Hệ thống tự động chuyển sang lưu trữ cục bộ: /uploads/{}/", folderName);
+            logger.warn("-> Vui lòng kiểm tra lại 'cloud-name', 'api-key', 'api-secret' trong application.properties!");
+            logger.warn("====================================================================");
             return saveLocally(file, folderName);
         }
     }

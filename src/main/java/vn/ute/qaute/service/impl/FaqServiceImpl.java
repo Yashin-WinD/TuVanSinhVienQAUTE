@@ -14,10 +14,13 @@ import java.util.List;
 public class FaqServiceImpl implements FaqService {
 
     private final FaqRepository faqRepository;
+    private final vn.ute.qaute.repository.ConsultationRequestRepository requestRepository;
 
     @Autowired
-    public FaqServiceImpl(FaqRepository faqRepository) {
+    public FaqServiceImpl(FaqRepository faqRepository,
+                          vn.ute.qaute.repository.ConsultationRequestRepository requestRepository) {
         this.faqRepository = faqRepository;
+        this.requestRepository = requestRepository;
     }
 
     @Override
@@ -83,5 +86,23 @@ public class FaqServiceImpl implements FaqService {
             f.setViewCount(f.getViewCount() + 1);
             faqRepository.save(f);
         });
+    }
+
+    @Override
+    @Transactional
+    public Faq createFaqFromRequest(Long requestId) {
+        vn.ute.qaute.entity.ConsultationRequest request = requestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phiếu tư vấn với ID: " + requestId));
+
+        if (request.getAnswerContent() == null || request.getAnswerContent().trim().isEmpty()) {
+            throw new vn.ute.qaute.exception.BadRequestException("Phiếu tư vấn này chưa có câu trả lời để lưu thành FAQ!");
+        }
+
+        String question = request.getTitle();
+        String answer = request.getAnswerContent();
+
+        Faq faq = new Faq(question, answer, request.getField());
+        faq.setIsPublished(true);
+        return faqRepository.save(faq);
     }
 }

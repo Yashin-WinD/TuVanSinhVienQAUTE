@@ -30,6 +30,26 @@
                 <i class="bi bi-question-circle-fill"></i> Quản lý FAQ
             </a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link" th:classappend="${activeMenu == 'requests' ? 'active' : ''}" th:href="@{/admin/requests}">
+                <i class="bi bi-diagram-3-fill"></i> Điều phối phiếu tư vấn
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" th:classappend="${activeMenu == 'documents' ? 'active' : ''}" th:href="@{/admin/documents}">
+                <i class="bi bi-file-earmark-text-fill"></i> Quản lý Công văn & Mẫu
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" th:classappend="${activeMenu == 'chat' ? 'active' : ''}" th:href="@{/admin/chat}">
+                <i class="bi bi-chat-dots-fill"></i> Chatbox hỗ trợ
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" th:classappend="${activeMenu == 'profile' ? 'active' : ''}" th:href="@{/admin/profile}">
+                <i class="bi bi-person-circle"></i> Hồ sơ cá nhân
+            </a>
+        </li>
         <li class="nav-item mt-3 pt-3 border-top">
             <a class="nav-link text-danger" th:href="@{/logout}">
                 <i class="bi bi-box-arrow-right"></i> Đăng xuất

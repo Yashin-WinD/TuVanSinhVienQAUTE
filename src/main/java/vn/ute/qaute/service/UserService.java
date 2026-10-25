@@ -17,4 +17,5 @@ public interface UserService {
     void updateUserStatus(Long userId, Boolean isActive);
     User createUser(User user);
     long countUsersByRole(RoleType role);
+    List<User> filterUsers(RoleType role, Long departmentId, Boolean isActive, String keyword);
 }

@@ -12,6 +12,8 @@ USE `qaute_db`;
 
 -- 2. Xóa các bảng cũ nếu tồn tại (theo thứ tự khóa ngoại)
 SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS `documents`;
+DROP TABLE IF EXISTS `otp_tokens`;
 DROP TABLE IF EXISTS `notifications`;
 DROP TABLE IF EXISTS `faqs`;
 DROP TABLE IF EXISTS `appointments`;
@@ -86,10 +88,14 @@ CREATE TABLE `consultation_requests` (
     `answer_files` TEXT NULL,
     `rating` INT NULL, -- 1 đến 5 sao
     `feedback` TEXT NULL,
+    `forward_reason` TEXT NULL,
+    `forwarded_from_id` BIGINT NULL,
+    `forwarded_at` DATETIME NULL,
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
     `resolved_at` DATETIME NULL,
     CONSTRAINT `fk_request_student` FOREIGN KEY (`student_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
     CONSTRAINT `fk_request_lecturer` FOREIGN KEY (`lecturer_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+    CONSTRAINT `fk_request_forwarded_from` FOREIGN KEY (`forwarded_from_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
     CONSTRAINT `fk_request_field` FOREIGN KEY (`field_id`) REFERENCES `consultation_fields` (`id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -102,6 +108,8 @@ CREATE TABLE `chat_messages` (
     `sender_id` BIGINT NOT NULL,
     `content` TEXT,
     `media_url` VARCHAR(500),
+    `file_name` VARCHAR(255) NULL,
+    `file_size` BIGINT NULL,
     `message_type` VARCHAR(50) NOT NULL DEFAULT 'TEXT', -- TEXT, IMAGE, FILE, SYSTEM
     `is_read` BOOLEAN DEFAULT FALSE,
     `sent_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -120,11 +128,42 @@ CREATE TABLE `appointments` (
     `meeting_time` DATETIME NOT NULL,
     `location_or_link` VARCHAR(255),
     `note` TEXT,
+    `cancel_reason` TEXT,
     `status` VARCHAR(50) NOT NULL DEFAULT 'SCHEDULED', -- SCHEDULED, COMPLETED, CANCELLED
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT `fk_appointment_consultation` FOREIGN KEY (`consultation_id`) REFERENCES `consultation_requests` (`id`) ON DELETE CASCADE,
     CONSTRAINT `fk_appointment_student` FOREIGN KEY (`student_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
     CONSTRAINT `fk_appointment_lecturer` FOREIGN KEY (`lecturer_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+-- 8.1. Tạo bảng `documents` (Kho văn bản, công văn & biểu mẫu)
+-- --------------------------------------------------------
+CREATE TABLE `documents` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `title` VARCHAR(255) NOT NULL,
+    `description` TEXT,
+    `file_url` VARCHAR(500) NOT NULL,
+    `file_name` VARCHAR(255),
+    `file_type` VARCHAR(50),
+    `file_size` BIGINT,
+    `category` VARCHAR(50) NOT NULL DEFAULT 'STUDENT_FORM',
+    `uploader_id` BIGINT NULL,
+    `download_count` INT DEFAULT 0,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT `fk_document_uploader` FOREIGN KEY (`uploader_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+-- 8.2. Tạo bảng `otp_tokens` (Mã xác thực OTP Email)
+-- --------------------------------------------------------
+CREATE TABLE `otp_tokens` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `email` VARCHAR(150) NOT NULL,
+    `otp` VARCHAR(10) NOT NULL,
+    `purpose` VARCHAR(100),
+    `expiry_time` DATETIME NOT NULL,
+    `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -157,10 +196,8 @@ CREATE TABLE `notifications` (
 
 -- ========================================================
 -- NẠP DỮ LIỆU MẪU BAN ĐẦU (SEED DATA)
--- Mật khẩu mặc định:
--- admin123     -> $2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi
--- gv123456     -> $2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi
--- sv123456     -> $2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi
+-- Mật khẩu mặc định của tất cả tài khoản mẫu:
+-- 123456 -> $2a$10$1OyjaV/bd70MJF8DeJkWKeXMHQK2.I8NzR6O1cPzsgMLb5cFFDf9O
 -- (Chú ý: DataInitializer trong Spring Boot cũng sẽ tự động đồng bộ tài khoản nếu chạy trực tiếp)
 -- ========================================================
 
@@ -179,13 +216,12 @@ INSERT INTO `consultation_fields` (`id`, `name`, `description`, `department_id`)
 (4, 'Xét chuẩn đầu ra & Tốt nghiệp', 'Chứng chỉ ngoại ngữ, tin học, xét công nhận tốt nghiệp sớm', 2),
 (5, 'Đồ án tốt nghiệp & Thực tập doanh nghiệp', 'Hướng dẫn đề tài, liên hệ doanh nghiệp thực tập ngành CNTT', 3);
 
--- 3. Thêm Tài khoản mẫu (Admin, Giảng viên, Sinh viên)
--- Mật khẩu hash bên dưới tương ứng với 'password123'
+-- 3. Thêm Tài khoản mẫu (Admin, Giảng viên, Sinh viên) - Mật khẩu mặc định: 123456
 INSERT INTO `users` (`id`, `username`, `password`, `full_name`, `email`, `phone`, `avatar_url`, `user_code`, `role`, `department_id`, `is_active`) VALUES
-(1, 'admin', '$2a$10$EblZqNptyYvcLm/VwDCVAuBjzZOI7khzdyGPBr08PpIi0na624b8.', 'Quản trị viên QAUTE', 'admin@hcmute.edu.vn', '0901234567', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150', 'ADMIN001', 'ROLE_ADMIN', NULL, TRUE),
-(2, 'giangvien', '$2a$10$EblZqNptyYvcLm/VwDCVAuBjzZOI7khzdyGPBr08PpIi0na624b8.', 'TS. Nguyễn Văn Giảng Viên', 'gv_fit@hcmute.edu.vn', '0912345678', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150', 'GV001', 'ROLE_LECTURER', 3, TRUE),
-(3, 'giangvien_ctsv', '$2a$10$EblZqNptyYvcLm/VwDCVAuBjzZOI7khzdyGPBr08PpIi0na624b8.', 'ThS. Trần Thị Cố Vấn', 'gv_ctsv@hcmute.edu.vn', '0923456789', 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150', 'GV002', 'ROLE_LECTURER', 1, TRUE),
-(4, 'sinhvien', '$2a$10$EblZqNptyYvcLm/VwDCVAuBjzZOI7khzdyGPBr08PpIi0na624b8.', 'Lê Văn Sinh Viên', '21110001@student.hcmute.edu.vn', '0934567890', 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150', '21110001', 'ROLE_STUDENT', NULL, TRUE);
+(1, 'admin', '$2a$10$1OyjaV/bd70MJF8DeJkWKeXMHQK2.I8NzR6O1cPzsgMLb5cFFDf9O', 'Quản trị viên QAUTE', 'admin@hcmute.edu.vn', '0901234567', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150', 'ADMIN001', 'ROLE_ADMIN', NULL, TRUE),
+(2, 'giangvien', '$2a$10$1OyjaV/bd70MJF8DeJkWKeXMHQK2.I8NzR6O1cPzsgMLb5cFFDf9O', 'TS. Nguyễn Văn Giảng Viên', 'gv_fit@hcmute.edu.vn', '0912345678', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150', 'GV001', 'ROLE_LECTURER', 3, TRUE),
+(3, 'giangvien_ctsv', '$2a$10$1OyjaV/bd70MJF8DeJkWKeXMHQK2.I8NzR6O1cPzsgMLb5cFFDf9O', 'ThS. Trần Thị Cố Vấn', 'gv_ctsv@hcmute.edu.vn', '0923456789', 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150', 'GV002', 'ROLE_LECTURER', 1, TRUE),
+(4, 'sinhvien', '$2a$10$1OyjaV/bd70MJF8DeJkWKeXMHQK2.I8NzR6O1cPzsgMLb5cFFDf9O', 'Lê Văn Sinh Viên', '21110001@student.hcmute.edu.vn', '0934567890', 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150', '21110001', 'ROLE_STUDENT', NULL, TRUE);
 
 -- 4. Thêm Câu hỏi FAQ mẫu
 INSERT INTO `faqs` (`id`, `question`, `answer`, `field_id`, `view_count`, `is_published`) VALUES

@@ -20,6 +20,9 @@
                 <li class="nav-item">
                     <a class="nav-link" th:href="@{/faq}"><i class="bi bi-question-circle me-1"></i>Hỏi đáp (FAQ)</a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/documents}"><i class="bi bi-file-earmark-text me-1"></i>Văn bản & Biểu mẫu</a>
+                </li>
             </ul>
 
             <ul class="navbar-nav ms-auto align-items-center">
@@ -47,6 +50,16 @@
                         </a>
                     </li>
 
+                    <!-- Nút Chatbox nhanh -->
+                    <li class="nav-item me-2">
+                        <a class="btn btn-outline-light btn-sm position-relative d-flex align-items-center gap-1" 
+                           th:href="${currentUser.role.name() == 'ROLE_STUDENT' ? '/student/chat' : (currentUser.role.name() == 'ROLE_LECTURER' ? '/lecturer/chat' : '/admin/chat')}"
+                           title="Hộp thoại Chatbox">
+                            <i class="bi bi-chat-dots-fill"></i>
+                            <span class="d-none d-md-inline">Chatbox</span>
+                        </a>
+                    </li>
+
                     <!-- Dropdown thông tin tài khoản -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle text-white d-flex align-items-center gap-2" href="#" role="button" data-bs-toggle="dropdown">
@@ -60,16 +73,28 @@
                                 <a class="dropdown-item" th:href="@{/student/dashboard}"><i class="bi bi-speedometer2 me-2"></i>Dashboard Sinh viên</a>
                             </li>
                             <li th:if="${currentUser.role.name() == 'ROLE_STUDENT'}">
+                                <a class="dropdown-item" th:href="@{/student/chat}"><i class="bi bi-chat-dots-fill me-2 text-primary"></i>Chatbox tư vấn</a>
+                            </li>
+                            <li th:if="${currentUser.role.name() == 'ROLE_STUDENT'}">
                                 <a class="dropdown-item" th:href="@{/student/profile}"><i class="bi bi-person-circle me-2"></i>Hồ sơ cá nhân</a>
                             </li>
                             <li th:if="${currentUser.role.name() == 'ROLE_LECTURER'}">
                                 <a class="dropdown-item" th:href="@{/lecturer/dashboard}"><i class="bi bi-speedometer2 me-2"></i>Dashboard Giảng viên</a>
                             </li>
                             <li th:if="${currentUser.role.name() == 'ROLE_LECTURER'}">
+                                <a class="dropdown-item" th:href="@{/lecturer/chat}"><i class="bi bi-chat-dots-fill me-2 text-primary"></i>Chatbox trao đổi</a>
+                            </li>
+                            <li th:if="${currentUser.role.name() == 'ROLE_LECTURER'}">
                                 <a class="dropdown-item" th:href="@{/lecturer/profile}"><i class="bi bi-person-circle me-2"></i>Hồ sơ cá nhân</a>
                             </li>
                             <li th:if="${currentUser.role.name() == 'ROLE_ADMIN'}">
                                 <a class="dropdown-item" th:href="@{/admin/dashboard}"><i class="bi bi-speedometer2 me-2"></i>Bảng quản trị Admin</a>
+                            </li>
+                            <li th:if="${currentUser.role.name() == 'ROLE_ADMIN'}">
+                                <a class="dropdown-item" th:href="@{/admin/chat}"><i class="bi bi-chat-dots-fill me-2 text-primary"></i>Chatbox hỗ trợ</a>
+                            </li>
+                            <li th:if="${currentUser.role.name() == 'ROLE_ADMIN'}">
+                                <a class="dropdown-item" th:href="@{/admin/profile}"><i class="bi bi-person-circle me-2"></i>Hồ sơ cá nhân</a>
                             </li>
                             <li><hr class="dropdown-divider"></li>
                             <li>

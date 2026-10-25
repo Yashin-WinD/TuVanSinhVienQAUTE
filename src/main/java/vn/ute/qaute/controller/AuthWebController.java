@@ -13,8 +13,10 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import vn.ute.qaute.dto.request.ForgotPasswordRequest;
 import vn.ute.qaute.dto.request.LoginRequest;
 import vn.ute.qaute.dto.request.RegisterRequest;
+import vn.ute.qaute.dto.request.ResetPasswordRequest;
 import vn.ute.qaute.dto.response.AuthResponse;
 import vn.ute.qaute.service.AuthService;
 import vn.ute.qaute.service.UserService;
@@ -104,7 +106,56 @@ public class AuthWebController {
             return "redirect:/login";
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Lỗi: " + e.getMessage());
+            redirectAttributes.addFlashAttribute("registerRequest", request);
             return "redirect:/register";
+        }
+    }
+
+    @GetMapping("/forgot-password")
+    public String forgotPasswordPage(Model model) {
+        if (userService.getCurrentUser() != null) {
+            return "redirect:/student/dashboard";
+        }
+        model.addAttribute("forgotPasswordRequest", new ForgotPasswordRequest());
+        return "auth/forgot-password";
+    }
+
+    @PostMapping("/forgot-password")
+    public String handleForgotPassword(@ModelAttribute("forgotPasswordRequest") ForgotPasswordRequest request,
+                                       RedirectAttributes redirectAttributes) {
+        try {
+            authService.sendForgotPasswordOtp(request.getEmail());
+            redirectAttributes.addFlashAttribute("successMessage", "Mã xác thực OTP đã được gửi đến email của bạn! (Kiểm tra Terminal nếu test cục bộ)");
+            return "redirect:/reset-password?email=" + request.getEmail();
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            return "redirect:/forgot-password";
+        }
+    }
+
+    @GetMapping("/reset-password")
+    public String resetPasswordPage(@RequestParam(value = "email", required = false) String email, Model model) {
+        if (userService.getCurrentUser() != null) {
+            return "redirect:/student/dashboard";
+        }
+        ResetPasswordRequest req = new ResetPasswordRequest();
+        if (email != null) {
+            req.setEmail(email);
+        }
+        model.addAttribute("resetPasswordRequest", req);
+        return "auth/reset-password";
+    }
+
+    @PostMapping("/reset-password")
+    public String handleResetPassword(@ModelAttribute("resetPasswordRequest") ResetPasswordRequest request,
+                                      RedirectAttributes redirectAttributes) {
+        try {
+            authService.resetPasswordWithOtp(request);
+            redirectAttributes.addFlashAttribute("successMessage", "Đặt lại mật khẩu thành công! Bạn có thể đăng nhập ngay.");
+            return "redirect:/login";
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            return "redirect:/reset-password?email=" + request.getEmail();
         }
     }
 

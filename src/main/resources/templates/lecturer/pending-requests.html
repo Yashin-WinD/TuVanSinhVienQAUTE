@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/header :: header('Câu hỏi chờ tiếp nhận - QAUTE')}">
 </head>
-<body class="d-flex flex-column min-vh-100">
+<body class="d-flex flex-column min-vh-100 bg-light">
     <div th:replace="~{fragments/navbar :: navbar}"></div>
 
     <div class="container-fluid flex-grow-1">
@@ -12,16 +12,65 @@
             </div>
 
             <div class="col-md-9 col-lg-10 p-4">
+                <!-- Page Title -->
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <div>
                         <h4 class="fw-bold text-primary mb-1">
-                            <i class="bi bi-inbox-fill me-2"></i>Câu Hỏi Chờ Tiếp Nhận (Khoa: <span th:text="${currentUser.department != null ? currentUser.department.name : 'Chung'}">Khoa</span>)
+                            <i class="bi bi-inbox-fill me-2"></i>Quản Lý Câu Hỏi Tư Vấn (Khoa: <span th:text="${currentUser.department != null ? currentUser.department.name : 'Chung'}">Khoa</span>)
                         </h4>
-                        <p class="text-muted mb-0 small">Các câu hỏi mới gửi từ sinh viên thuộc lĩnh vực quản lý của đơn vị</p>
+                        <p class="text-muted mb-0 small">Theo dõi, tiếp nhận giải đáp và chuyển tiếp các câu hỏi từ sinh viên trong đơn vị.</p>
                     </div>
                 </div>
 
-                <div class="card card-custom">
+                <!-- Alert Messages -->
+                <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMessage}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${errorMessage}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+
+                <!-- Filter & Search Card -->
+                <div class="card card-custom p-3 mb-4 border-0 shadow-sm">
+                    <form th:action="@{/lecturer/requests/pending}" method="get" class="row g-2 align-items-center">
+                        <div class="col-md-4">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                                <input type="text" name="keyword" th:value="${keyword}" class="form-control border-start-0" 
+                                       placeholder="Tìm theo tiêu đề, MSSV, nội dung...">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <select name="fieldId" class="form-select">
+                                <option value="">-- Tất cả lĩnh vực --</option>
+                                <option th:each="f : ${fields}" th:value="${f.id}" th:text="${f.name}"
+                                        th:selected="${selectedFieldId == f.id}">Lĩnh vực</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select name="status" class="form-select">
+                                <option value="">-- Trạng thái --</option>
+                                <option th:each="st : ${statuses}" th:value="${st}" th:text="${st.displayName}"
+                                        th:selected="${selectedStatus == st}">Trạng thái</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select name="priority" class="form-select">
+                                <option value="">-- Mức ưu tiên --</option>
+                                <option th:each="pr : ${priorities}" th:value="${pr}" th:text="${pr.displayName}"
+                                        th:selected="${selectedPriority == pr}">Ưu tiên</option>
+                            </select>
+                        </div>
+                        <div class="col-md-1">
+                            <button type="submit" class="btn btn-primary w-100 fw-semibold" title="Lọc"><i class="bi bi-funnel-fill"></i></button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Requests Table -->
+                <div class="card card-custom border-0 shadow-sm">
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table table-hover align-middle mb-0">
@@ -32,36 +81,87 @@
                                         <th>Lĩnh vực</th>
                                         <th>Tiêu đề câu hỏi</th>
                                         <th>Mức ưu tiên</th>
-                                        <th>Thời gian gửi</th>
-                                        <th>Hành động</th>
+                                        <th>Trạng thái</th>
+                                        <th>Thời gian</th>
+                                        <th class="text-end pe-4">Hành động</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr th:if="${pendingPage == null or #lists.isEmpty(pendingPage.content)}">
-                                        <td colspan="7" class="text-center py-4 text-muted">Hiện tại không có câu hỏi mới nào đang chờ tiếp nhận.</td>
+                                        <td colspan="8" class="text-center py-5 text-muted">
+                                            <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
+                                            Hiện tại không có câu hỏi nào phù hợp với bộ lọc.
+                                        </td>
                                     </tr>
                                     <tr th:if="${pendingPage != null}" th:each="r : ${pendingPage.content}">
-                                        <td><strong th:text="'#' + ${r.id}">#1</strong></td>
+                                        <td><strong class="text-secondary" th:text="'#' + ${r.id}">#1</strong></td>
                                         <td>
-                                            <div class="fw-semibold" th:text="${r.student.fullName}">Sinh viên</div>
+                                            <div class="fw-semibold text-dark" th:text="${r.student.fullName}">Sinh viên</div>
                                             <small class="text-muted" th:text="${r.student.userCode}">MSSV</small>
                                         </td>
-                                        <td><span class="badge bg-light text-dark" th:text="${r.field.name}">Lĩnh vực</span></td>
-                                        <td class="fw-semibold text-primary" th:text="${r.title}">Tiêu đề</td>
+                                        <td><span class="badge bg-light text-dark border" th:text="${r.field.name}">Lĩnh vực</span></td>
                                         <td>
-                                            <span class="badge" th:classappend="'badge-priority-' + ${r.priority.name()}" th:text="${r.priority.displayName}">Bình thường</span>
+                                            <span class="fw-semibold text-dark" th:text="${r.title}">Tiêu đề</span>
+                                            <!-- SLA Badge -->
+                                            <span th:if="${r.isOverdue()}" class="badge bg-danger ms-1" title="Quá hạn SLA phản hồi">
+                                                <i class="bi bi-alarm me-1"></i>Quá hạn
+                                            </span>
+                                            <!-- Forwarded Badge -->
+                                            <span th:if="${r.forwardedFrom != null}" class="badge bg-warning-subtle text-warning ms-1" title="Phiếu chuyển tiếp">
+                                                <i class="bi bi-arrow-repeat me-1"></i>Chuyển tiếp
+                                            </span>
                                         </td>
-                                        <td th:text="${#temporals.format(r.createdAt, 'dd/MM/yyyy HH:mm')}">Thời gian</td>
                                         <td>
-                                            <form th:action="@{/lecturer/requests/{id}/claim(id=${r.id})}" method="post">
-                                                <button type="submit" class="btn btn-sm btn-success">
-                                                    <i class="bi bi-hand-index-thumb me-1"></i>Tiếp nhận tư vấn
-                                                </button>
-                                            </form>
+                                            <span class="badge" 
+                                                  th:classappend="${r.priority.name() == 'URGENT' ? 'bg-danger' : 
+                                                                   (r.priority.name() == 'HIGH' ? 'bg-warning text-dark' : 
+                                                                   (r.priority.name() == 'MEDIUM' ? 'bg-info text-dark' : 'bg-secondary'))}"
+                                                  th:text="${r.priority.displayName}">
+                                                Ưu tiên
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge" th:classappend="'badge-status-' + ${r.status.name()}" th:text="${r.status.displayName}">Trạng thái</span>
+                                        </td>
+                                        <td>
+                                            <small class="text-muted" th:text="${#temporals.format(r.createdAt, 'dd/MM/yyyy HH:mm')}">Thời gian</small>
+                                        </td>
+                                        <td class="text-end pe-4">
+                                            <div th:if="${r.status.name() == 'PENDING'}">
+                                                <form th:action="@{/lecturer/requests/{id}/claim(id=${r.id})}" method="post" style="display:inline;">
+                                                    <button type="submit" class="btn btn-sm btn-success fw-semibold">
+                                                        <i class="bi bi-hand-index-thumb me-1"></i>Tiếp nhận
+                                                    </button>
+                                                </form>
+                                            </div>
+                                            <div th:unless="${r.status.name() == 'PENDING'}" class="d-flex justify-content-end gap-1">
+                                                <a th:href="@{/lecturer/requests/{id}/answer(id=${r.id})}" class="btn btn-sm btn-outline-primary" title="Xem & Trả lời">
+                                                    <i class="bi bi-pencil-square"></i> Chi tiết
+                                                </a>
+                                                <a th:href="@{/lecturer/chat(id=${r.id})}" class="btn btn-sm btn-outline-success" title="Chat trực tiếp">
+                                                    <i class="bi bi-chat-dots-fill"></i>
+                                                </a>
+                                            </div>
                                         </td>
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        <div th:if="${pendingPage != null && pendingPage.totalPages > 1}" class="d-flex justify-content-center p-3 border-top">
+                            <ul class="pagination pagination-sm mb-0">
+                                <li class="page-item" th:classappend="${pendingPage.first ? 'disabled' : ''}">
+                                    <a class="page-link" th:href="@{/lecturer/requests/pending(page=${pendingPage.number - 1}, keyword=${keyword}, fieldId=${selectedFieldId}, status=${selectedStatus}, priority=${selectedPriority})}">Trước</a>
+                                </li>
+                                <li th:each="i : ${#numbers.sequence(0, pendingPage.totalPages - 1)}" 
+                                    class="page-item" th:classappend="${pendingPage.number == i ? 'active' : ''}">
+                                    <a class="page-link" th:href="@{/lecturer/requests/pending(page=${i}, keyword=${keyword}, fieldId=${selectedFieldId}, status=${selectedStatus}, priority=${selectedPriority})}" th:text="${i + 1}">1</a>
+                                </li>
+                                <li class="page-item" th:classappend="${pendingPage.last ? 'disabled' : ''}">
+                                    <a class="page-link" th:href="@{/lecturer/requests/pending(page=${pendingPage.number + 1}, keyword=${keyword}, fieldId=${selectedFieldId}, status=${selectedStatus}, priority=${selectedPriority})}">Sau</a>
+                                </li>
+                            </ul>
                         </div>
                     </div>
                 </div>
