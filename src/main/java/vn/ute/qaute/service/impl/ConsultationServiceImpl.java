@@ -29,16 +29,19 @@ public class ConsultationServiceImpl implements ConsultationService {
     private final ConsultationFieldRepository fieldRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final vn.ute.qaute.service.MailService mailService;
 
     @Autowired
     public ConsultationServiceImpl(ConsultationRequestRepository requestRepository,
                                    ConsultationFieldRepository fieldRepository,
                                    UserRepository userRepository,
-                                   NotificationService notificationService) {
+                                   NotificationService notificationService,
+                                   vn.ute.qaute.service.MailService mailService) {
         this.requestRepository = requestRepository;
         this.fieldRepository = fieldRepository;
         this.userRepository = userRepository;
         this.notificationService = notificationService;
+        this.mailService = mailService;
     }
 
     @Override
@@ -65,6 +68,20 @@ public class ConsultationServiceImpl implements ConsultationService {
                 "Câu hỏi '" + saved.getTitle() + "' của bạn đã được gửi đến ban cố vấn.",
                 "/student/requests/" + saved.getId()
         );
+
+        // Auto-Mailer: Gửi email thông báo cho sinh viên xác nhận đã nhận câu hỏi
+        if (student.getEmail() != null) {
+            mailService.sendNotificationEmail(
+                    student.getEmail(),
+                    "Xác nhận gửi câu hỏi tư vấn #" + saved.getId(),
+                    "Câu hỏi tư vấn của bạn đã được tiếp nhận",
+                    "Chào " + student.getFullName() + ",\n\nCâu hỏi: '" + saved.getTitle() + "' thuộc Khoa/Ban: " 
+                            + field.getDepartment().getName() + " đã được gửi lên hệ thống.\n"
+                            + "Các giảng viên phụ trách sẽ xem xét và phản hồi sớm nhất có thể.\n\n"
+                            + "Trân trọng,\nBan Tư vấn QAUTE",
+                    "/student/requests/" + saved.getId()
+            );
+        }
 
         return saved;
     }
@@ -129,13 +146,29 @@ public class ConsultationServiceImpl implements ConsultationService {
         request.setResolvedAt(LocalDateTime.now());
         requestRepository.save(request);
 
-        // Thông báo cho sinh viên nhận câu trả lời
+        // Thông báo cho sinh viên nhận câu trả lời trong hệ thống
         notificationService.sendNotification(
                 request.getStudent(),
                 "Câu hỏi của bạn đã có lời giải đáp!",
                 "Thầy/Cô " + lecturer.getFullName() + " đã trả lời câu hỏi: '" + request.getTitle() + "'",
                 "/student/requests/" + request.getId()
         );
+
+        // Auto-Mailer: Gửi email kèm trích dẫn câu trả lời cho sinh viên
+        if (request.getStudent().getEmail() != null) {
+            String answerSnippet = dto.getAnswerContent().length() > 200 
+                    ? (dto.getAnswerContent().substring(0, 200) + "...") 
+                    : dto.getAnswerContent();
+            mailService.sendNotificationEmail(
+                    request.getStudent().getEmail(),
+                    "Câu hỏi #" + request.getId() + " đã được giải đáp",
+                    "Thầy/Cô " + lecturer.getFullName() + " đã phản hồi câu hỏi của bạn",
+                    "Tiêu đề câu hỏi: " + request.getTitle() + "\n\n"
+                            + "Trích đoạn giải đáp:\n\"" + answerSnippet + "\"\n\n"
+                            + "Vui lòng bấm vào liên kết bên dưới để xem toàn bộ nội dung phản hồi chi tiết và đánh giá mức độ hài lòng.",
+                    "/student/requests/" + request.getId()
+            );
+        }
     }
 
     @Override
@@ -165,6 +198,85 @@ public class ConsultationServiceImpl implements ConsultationService {
     public void updateStatus(Long requestId, RequestStatus status) {
         ConsultationRequest request = getRequestById(requestId);
         request.setStatus(status);
+        requestRepository.save(request);
+    }
+
+    @Override
+    public Page<ConsultationRequest> filterRequests(Long studentId, Long lecturerId, Long departmentId, Long fieldId,
+                                                    RequestStatus status, vn.ute.qaute.entity.enums.PriorityLevel priority,
+                                                    String keyword, Pageable pageable) {
+        return requestRepository.filterRequests(studentId, lecturerId, departmentId, fieldId, status, priority, keyword, pageable);
+    }
+
+    @Override
+    @Transactional
+    public void forwardRequest(Long requestId, Long targetFieldId, Long targetLecturerId, String reason, User lecturer) {
+        ConsultationRequest request = getRequestById(requestId);
+        ConsultationField targetField = fieldRepository.findById(targetFieldId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy lĩnh vực chuyển tiếp"));
+
+        request.setField(targetField);
+        request.setForwardReason(reason);
+        request.setForwardedFrom(lecturer);
+        request.setForwardedAt(LocalDateTime.now());
+
+        if (targetLecturerId != null) {
+            User targetLecturer = userRepository.findById(targetLecturerId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy giảng viên đích"));
+            request.setLecturer(targetLecturer);
+            request.setStatus(RequestStatus.ASSIGNED);
+
+            notificationService.sendNotification(
+                    targetLecturer,
+                    "Phiếu tư vấn được chuyển tiếp tới bạn",
+                    "Thầy/Cô " + lecturer.getFullName() + " đã chuyển tiếp phiếu #" + request.getId() + " với lý do: " + reason,
+                    "/lecturer/requests/" + request.getId() + "/answer"
+            );
+
+            if (targetLecturer.getEmail() != null) {
+                mailService.sendNotificationEmail(
+                        targetLecturer.getEmail(),
+                        "Phiếu tư vấn #" + request.getId() + " được chuyển tiếp tới bạn",
+                        "Bạn nhận được phiếu tư vấn chuyển tiếp",
+                        "Thầy/Cô " + lecturer.getFullName() + " đã chuyển tiếp phiếu tư vấn #" + request.getId() 
+                                + ": '" + request.getTitle() + "' đến bạn.\n\n"
+                                + "Lý do chuyển tiếp: " + reason,
+                        "/lecturer/requests/" + request.getId() + "/answer"
+                );
+            }
+        } else {
+            request.setLecturer(null);
+            request.setStatus(RequestStatus.PENDING);
+        }
+
+        requestRepository.save(request);
+
+        // Thông báo cho sinh viên biết câu hỏi đã được chuyển tiếp
+        notificationService.sendNotification(
+                request.getStudent(),
+                "Câu hỏi của bạn đã được chuyển tiếp chuyên môn",
+                "Câu hỏi #" + request.getId() + " đã được chuyển sang lĩnh vực: " + targetField.getName() + " để hỗ trợ chính xác hơn.",
+                "/student/requests/" + request.getId()
+        );
+    }
+
+    @Override
+    @Transactional
+    public void updatePriority(Long requestId, vn.ute.qaute.entity.enums.PriorityLevel priority) {
+        ConsultationRequest request = getRequestById(requestId);
+        request.setPriority(priority);
+        requestRepository.save(request);
+    }
+
+    @Override
+    @Transactional
+    public void toggleRequestStatus(Long requestId) {
+        ConsultationRequest request = getRequestById(requestId);
+        if (request.getStatus() == RequestStatus.CLOSED) {
+            request.setStatus(request.getAnswerContent() != null ? RequestStatus.RESOLVED : RequestStatus.ASSIGNED);
+        } else {
+            request.setStatus(RequestStatus.CLOSED);
+        }
         requestRepository.save(request);
     }
 

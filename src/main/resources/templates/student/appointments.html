@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/header :: header('Lịch hẹn tư vấn của tôi - QAUTE')}">
+</head>
+<body class="d-flex flex-column min-vh-100 bg-light">
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+    <div class="container-fluid flex-grow-1">
+        <div class="row">
+            <div class="col-md-3 col-lg-2 p-0">
+                <div th:replace="~{fragments/sidebar-student :: sidebar('appointments')}"></div>
+            </div>
+
+            <div class="col-md-9 col-lg-10 p-4">
+                <!-- Page Title -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h4 class="fw-bold text-primary mb-1">
+                            <i class="bi bi-calendar-check-fill me-2"></i>Lịch Hẹn Tư Vấn Của Tôi
+                        </h4>
+                        <p class="text-muted small mb-0">Theo dõi, xác nhận tham gia hoặc xin dời các buổi hẹn tư vấn trực tiếp và online với Thầy/Cô.</p>
+                    </div>
+                </div>
+
+                <!-- Alert Messages -->
+                <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMessage}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${errorMessage}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+
+                <!-- Filter Tabs -->
+                <div class="card card-custom p-3 mb-4 border-0 shadow-sm">
+                    <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between">
+                        <div class="d-flex flex-wrap gap-2">
+                            <a th:href="@{/student/appointments}" class="btn btn-sm"
+                               th:classappend="${selectedStatus == null ? 'btn-primary' : 'btn-outline-secondary'}">
+                                Tất cả lịch hẹn
+                            </a>
+                            <a th:each="st : ${statuses}" th:href="@{/student/appointments(status=${st})}"
+                               class="btn btn-sm"
+                               th:classappend="${selectedStatus == st ? 'btn-primary' : 'btn-outline-secondary'}"
+                               th:text="${st.displayName}">
+                                Trạng thái
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Appointments List -->
+                <div class="card card-custom border-0 shadow-sm">
+                    <div class="card-header card-header-custom bg-white py-3">
+                        <span class="fs-6 fw-bold text-dark"><i class="bi bi-list-stars me-2 text-primary"></i>Danh sách cuộc hẹn</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Giảng viên phụ trách</th>
+                                        <th>Thời gian hẹn</th>
+                                        <th>Hình thức & Địa điểm / Link</th>
+                                        <th>Ghi chú từ Giảng viên</th>
+                                        <th>Trạng thái</th>
+                                        <th class="text-end pe-4">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:if="${#lists.isEmpty(appointments)}">
+                                        <td colspan="6" class="text-center py-5 text-muted">
+                                            <i class="bi bi-calendar-x fs-1 d-block mb-2 text-secondary"></i>
+                                            Bạn chưa có lịch hẹn tư vấn nào trong mục này.
+                                        </td>
+                                    </tr>
+                                    <tr th:each="apt : ${appointments}">
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <img th:src="${apt.lecturer.avatarUrl != null ? apt.lecturer.avatarUrl : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}" 
+                                                     class="avatar-circle-sm" alt="Avatar">
+                                                <div>
+                                                    <div class="fw-bold text-dark" th:text="${apt.lecturer.fullName}">Thầy/Cô Giảng viên</div>
+                                                    <small class="text-muted" th:text="${apt.lecturer.department != null ? apt.lecturer.department.name : 'Khoa'}">Khoa</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="fw-bold text-primary">
+                                                <i class="bi bi-clock me-1"></i><span th:text="${#temporals.format(apt.meetingTime, 'HH:mm')}">08:00</span>
+                                            </div>
+                                            <small class="text-muted" th:text="${#temporals.format(apt.meetingTime, 'dd/MM/yyyy')}">25/10/2026</small>
+                                        </td>
+                                        <td>
+                                            <div th:if="${apt.locationOrLink != null && (apt.locationOrLink.contains('http') || apt.locationOrLink.contains('meet.google.com'))}">
+                                                <span class="badge bg-info-subtle text-info mb-1"><i class="bi bi-camera-video me-1"></i>Online Meet</span>
+                                                <div>
+                                                    <a th:href="${apt.locationOrLink}" target="_blank" class="text-decoration-none fw-semibold small">
+                                                        <i class="bi bi-box-arrow-up-right me-1"></i>Vào phòng họp
+                                                    </a>
+                                                </div>
+                                            </div>
+                                            <div th:unless="${apt.locationOrLink != null && (apt.locationOrLink.contains('http') || apt.locationOrLink.contains('meet.google.com'))}">
+                                                <span class="badge bg-secondary-subtle text-secondary mb-1"><i class="bi bi-geo-alt me-1"></i>Trực tiếp</span>
+                                                <div class="small fw-semibold text-dark" th:text="${apt.locationOrLink}">Văn phòng khoa</div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="small text-muted" th:text="${apt.note != null && !apt.note.isEmpty() ? apt.note : '-'}">-</span>
+                                            <div th:if="${apt.status.name() == 'CANCELLED' && apt.cancelReason != null}" class="text-danger small mt-1">
+                                                <strong>Lý do hủy:</strong> <span th:text="${apt.cancelReason}"></span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge" 
+                                                  th:classappend="${apt.status.name() == 'SCHEDULED' ? 'bg-primary' : (apt.status.name() == 'COMPLETED' ? 'bg-success' : 'bg-danger')}"
+                                                  th:text="${apt.status.displayName}">
+                                                Đã lên lịch
+                                            </span>
+                                        </td>
+                                        <td class="text-end pe-4">
+                                            <div th:if="${apt.status.name() == 'SCHEDULED'}" class="d-flex justify-content-end gap-2">
+                                                <form th:action="@{/student/appointments/{id}/confirm(id=${apt.id})}" method="post" style="display:inline;">
+                                                    <button type="submit" class="btn btn-sm btn-success" title="Xác nhận hoàn thành / tham gia">
+                                                        <i class="bi bi-check-lg me-1"></i>Hoàn thành
+                                                    </button>
+                                                </form>
+                                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                        th:data-id="${apt.id}"
+                                                        onclick="openCancelModal(this.getAttribute('data-id'))" title="Xin dời lịch hoặc hủy hẹn">
+                                                    <i class="bi bi-x-circle me-1"></i>Hủy/Dời
+                                                </button>
+                                            </div>
+                                            <span th:unless="${apt.status.name() == 'SCHEDULED'}" class="text-muted small">
+                                                <i class="bi bi-dash-circle"></i> Không khả dụng
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Cancel Appointment -->
+    <div class="modal fade" id="cancelAppointmentModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form id="cancelAppointmentForm" method="post" action="">
+                    <div class="modal-header py-3">
+                        <h5 class="modal-title text-danger fw-bold"><i class="bi bi-exclamation-octagon me-2"></i>Xin dời lịch / Hủy lịch hẹn</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="small text-muted mb-3">Vui lòng cung cấp lý do để Thầy/Cô nắm được thông tin và sắp xếp lại lịch hẹn phù hợp.</p>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Lý do xin dời hoặc hủy <span class="text-danger">*</span></label>
+                            <textarea name="reason" class="form-control" rows="3" required placeholder="vd: Trùng lịch thi giữa kỳ, muốn xin dời sang ngày khác..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer py-2">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+                        <button type="submit" class="btn btn-danger btn-sm fw-semibold">Xác nhận gửi</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+    <div th:replace="~{fragments/scripts :: scripts}"></div>
+
+    <script>
+        function openCancelModal(appointmentId) {
+            const form = document.getElementById('cancelAppointmentForm');
+            form.action = '/student/appointments/' + appointmentId + '/cancel';
+            new bootstrap.Modal(document.getElementById('cancelAppointmentModal')).show();
+        }
+    </script>
+</body>
+</html>

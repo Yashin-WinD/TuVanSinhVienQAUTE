@@ -36,7 +36,7 @@ public class WebSocketChatController {
         String senderName = messageDto.getSenderName();
         String senderAvatar = messageDto.getSenderAvatar();
 
-        // Lấy thông tin người gửi từ Principal nếu có
+        // Lấy thông tin người gửi từ Principal nếu có, hoặc từ senderId
         if (principal != null) {
             User sender = userRepository.findByUsername(principal.getName()).orElse(null);
             if (sender != null) {
@@ -44,6 +44,15 @@ public class WebSocketChatController {
                 senderName = sender.getFullName();
                 senderAvatar = sender.getAvatarUrl();
                 messageDto.setSenderRole(sender.getRole().name());
+            }
+        } else if (senderId != null) {
+            User sender = userRepository.findById(senderId).orElse(null);
+            if (sender != null) {
+                if (senderName == null) senderName = sender.getFullName();
+                if (senderAvatar == null) senderAvatar = sender.getAvatarUrl();
+                if (messageDto.getSenderRole() == null && sender.getRole() != null) {
+                    messageDto.setSenderRole(sender.getRole().name());
+                }
             }
         }
 

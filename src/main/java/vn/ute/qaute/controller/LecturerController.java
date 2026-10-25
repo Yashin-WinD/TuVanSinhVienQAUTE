@@ -24,18 +24,24 @@ public class LecturerController {
     private final ChatService chatService;
     private final AppointmentService appointmentService;
     private final CloudinaryService cloudinaryService;
+    private final DepartmentService departmentService;
+    private final FaqService faqService;
 
     @Autowired
     public LecturerController(UserService userService,
                               ConsultationService consultationService,
                               ChatService chatService,
                               AppointmentService appointmentService,
-                              CloudinaryService cloudinaryService) {
+                              CloudinaryService cloudinaryService,
+                              DepartmentService departmentService,
+                              FaqService faqService) {
         this.userService = userService;
         this.consultationService = consultationService;
         this.chatService = chatService;
         this.appointmentService = appointmentService;
         this.cloudinaryService = cloudinaryService;
+        this.departmentService = departmentService;
+        this.faqService = faqService;
     }
 
     @ModelAttribute
@@ -63,12 +69,28 @@ public class LecturerController {
     }
 
     @GetMapping("/requests/pending")
-    public String pendingRequests(@RequestParam(value = "page", defaultValue = "0") int page, Model model) {
+    public String pendingRequests(@RequestParam(value = "page", defaultValue = "0") int page,
+                                  @RequestParam(value = "status", required = false) RequestStatus status,
+                                  @RequestParam(value = "priority", required = false) vn.ute.qaute.entity.enums.PriorityLevel priority,
+                                  @RequestParam(value = "fieldId", required = false) Long fieldId,
+                                  @RequestParam(value = "keyword", required = false) String keyword,
+                                  Model model) {
         User lecturer = userService.getCurrentUser();
-        if (lecturer.getDepartment() != null) {
-            model.addAttribute("pendingPage",
-                    consultationService.getPendingRequestsByDepartment(lecturer.getDepartment().getId(), PageRequest.of(page, 10)));
-        }
+        Long deptId = lecturer.getDepartment() != null ? lecturer.getDepartment().getId() : null;
+
+        // Lọc danh sách câu hỏi trong khoa của giảng viên
+        org.springframework.data.domain.Page<ConsultationRequest> pendingPage = consultationService.filterRequests(
+                null, null, deptId, fieldId, status, priority, keyword, PageRequest.of(page, 10));
+
+        model.addAttribute("pendingPage", pendingPage);
+        model.addAttribute("fields", deptId != null ? departmentService.getFieldsByDepartment(deptId) : departmentService.getAllFields());
+        model.addAttribute("statuses", RequestStatus.values());
+        model.addAttribute("priorities", vn.ute.qaute.entity.enums.PriorityLevel.values());
+        model.addAttribute("selectedStatus", status);
+        model.addAttribute("selectedPriority", priority);
+        model.addAttribute("selectedFieldId", fieldId);
+        model.addAttribute("keyword", keyword);
+
         return "lecturer/pending-requests";
     }
 
@@ -90,6 +112,9 @@ public class LecturerController {
         ConsultationRequest req = consultationService.getRequestById(id);
         model.addAttribute("request", req);
         model.addAttribute("answerDto", new AnswerRequestDto(req.getAnswerContent(), req.getAnswerFiles()));
+        model.addAttribute("departments", departmentService.getAllDepartments());
+        model.addAttribute("fields", departmentService.getAllFields());
+        model.addAttribute("lecturers", userService.getUsersByRole(vn.ute.qaute.entity.enums.RoleType.ROLE_LECTURER));
         return "lecturer/answer-request";
     }
 
@@ -116,23 +141,90 @@ public class LecturerController {
         }
     }
 
-    @GetMapping("/chat/{id}")
-    public String chatRoom(@PathVariable("id") Long consultationId, Model model) {
+    // 1.4: Chuyển tiếp câu hỏi (Forward/Escalate Request)
+    @PostMapping("/requests/{id}/forward")
+    public String handleForward(@PathVariable("id") Long id,
+                                @RequestParam("targetFieldId") Long targetFieldId,
+                                @RequestParam(value = "targetLecturerId", required = false) Long targetLecturerId,
+                                @RequestParam("reason") String reason,
+                                RedirectAttributes redirectAttributes) {
+        try {
+            User lecturer = userService.getCurrentUser();
+            consultationService.forwardRequest(id, targetFieldId, targetLecturerId, reason, lecturer);
+            redirectAttributes.addFlashAttribute("successMessage", "Đã chuyển tiếp phiếu tư vấn #" + id + " thành công!");
+            return "redirect:/lecturer/dashboard";
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Lỗi chuyển tiếp: " + e.getMessage());
+            return "redirect:/lecturer/requests/" + id + "/answer";
+        }
+    }
+
+    // 2.3: Lưu thành FAQ công khai
+    @PostMapping("/requests/{id}/save-faq")
+    public String handleSaveFaq(@PathVariable("id") Long id, RedirectAttributes redirectAttributes) {
+        try {
+            faqService.createFaqFromRequest(id);
+            redirectAttributes.addFlashAttribute("successMessage", "Đã lưu câu trả lời thành bài FAQ công khai thành công!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Lỗi lưu FAQ: " + e.getMessage());
+        }
+        return "redirect:/lecturer/requests/" + id + "/answer";
+    }
+
+    @GetMapping("/chat")
+    public String chatBox(@RequestParam(value = "id", required = false) Long consultationId, Model model) {
         User lecturer = userService.getCurrentUser();
-        ConsultationRequest req = consultationService.getRequestById(consultationId);
+        java.util.List<ConsultationRequest> assignedRequests = consultationService.getRequestsByLecturer(
+                lecturer.getId(), PageRequest.of(0, 50)).getContent();
 
-        // Đánh dấu đã đọc tin nhắn
-        chatService.markMessagesAsRead(consultationId, lecturer.getId());
+        java.util.List<ConsultationRequest> allConversations = new java.util.ArrayList<>(assignedRequests);
 
-        model.addAttribute("request", req);
-        model.addAttribute("messages", chatService.getChatHistory(consultationId));
+        if (lecturer.getDepartment() != null) {
+            java.util.List<ConsultationRequest> deptPending = consultationService.getPendingRequestsByDepartment(
+                    lecturer.getDepartment().getId(), PageRequest.of(0, 20)).getContent();
+            for (ConsultationRequest r : deptPending) {
+                if (allConversations.stream().noneMatch(existing -> existing.getId().equals(r.getId()))) {
+                    allConversations.add(r);
+                }
+            }
+        }
+
+        ConsultationRequest activeRequest = null;
+        if (consultationId != null) {
+            try {
+                activeRequest = consultationService.getRequestById(consultationId);
+            } catch (Exception ignored) {
+            }
+        }
+
+        if (activeRequest == null && !allConversations.isEmpty()) {
+            activeRequest = allConversations.get(0);
+        }
+
+        if (activeRequest != null) {
+            chatService.markMessagesAsRead(activeRequest.getId(), lecturer.getId());
+            model.addAttribute("request", activeRequest);
+            model.addAttribute("messages", chatService.getChatHistory(activeRequest.getId()));
+        } else {
+            model.addAttribute("request", null);
+            model.addAttribute("messages", java.util.Collections.emptyList());
+        }
+
+        model.addAttribute("consultations", allConversations);
         return "lecturer/chat";
     }
 
+    @GetMapping("/chat/{id}")
+    public String chatRoom(@PathVariable("id") Long consultationId) {
+        return "redirect:/lecturer/chat?id=" + consultationId;
+    }
+
     @GetMapping("/schedule")
-    public String schedulePage(Model model) {
+    public String schedulePage(@RequestParam(value = "status", required = false) vn.ute.qaute.entity.enums.AppointmentStatus status, Model model) {
         User lecturer = userService.getCurrentUser();
-        model.addAttribute("appointments", appointmentService.getAppointmentsByLecturer(lecturer.getId()));
+        model.addAttribute("appointments", appointmentService.getAppointmentsByLecturerAndStatus(lecturer.getId(), status));
+        model.addAttribute("statuses", vn.ute.qaute.entity.enums.AppointmentStatus.values());
+        model.addAttribute("selectedStatus", status);
         model.addAttribute("appointmentDto", new CreateAppointmentDto());
         return "lecturer/schedule";
     }
