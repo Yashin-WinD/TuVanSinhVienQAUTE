@@ -79,7 +79,9 @@
                                         <td>
                                             <div class="d-flex align-items-center gap-2">
                                                 <img th:src="${apt.lecturer.avatarUrl != null ? apt.lecturer.avatarUrl : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}" 
-                                                     class="avatar-circle-sm" alt="Avatar">
+                                                     class="avatar-circle-sm rounded-circle border flex-shrink-0" 
+                                                     style="width: 36px; height: 36px; min-width: 36px; min-height: 36px; max-width: 36px; max-height: 36px; object-fit: cover;" 
+                                                     alt="Avatar">
                                                 <div>
                                                     <div class="fw-bold text-dark" th:text="${apt.lecturer.fullName}">Thầy/Cô Giảng viên</div>
                                                     <small class="text-muted" th:text="${apt.lecturer.department != null ? apt.lecturer.department.name : 'Khoa'}">Khoa</small>
