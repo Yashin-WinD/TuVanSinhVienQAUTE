@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/header :: header(${pageTitle})}">
+</head>
+<body class="d-flex flex-column min-vh-100">
+    <!-- Navbar -->
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+    <div class="container-fluid flex-grow-1">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 p-0">
+                <th:block th:if="${currentUser != null}">
+                    <div th:if="${currentUser.role.name() == 'ROLE_STUDENT'}" 
+                         th:replace="~{fragments/sidebar-student :: sidebar(${activeMenu})}"></div>
+                    <div th:if="${currentUser.role.name() == 'ROLE_LECTURER'}" 
+                         th:replace="~{fragments/sidebar-lecturer :: sidebar(${activeMenu})}"></div>
+                    <div th:if="${currentUser.role.name() == 'ROLE_ADMIN'}" 
+                         th:replace="~{fragments/sidebar-admin :: sidebar(${activeMenu})}"></div>
+                </th:block>
+            </div>
+
+            <!-- Content Area -->
+            <div class="col-md-9 col-lg-10 p-4">
+                <!-- Thông báo Flash Messages -->
+                <div th:if="${successMessage != null}" class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMessage}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <div th:if="${errorMessage != null}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${errorMessage}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+
+                <!-- Main content slot -->
+                <div th:replace="${content}"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div th:replace="~{fragments/footer :: footer}"></div>
+
+    <!-- Scripts -->
+    <div th:replace="~{fragments/scripts :: scripts}"></div>
+</body>
+</html>

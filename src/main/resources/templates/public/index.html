@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/header :: header('Trang chủ - Cổng tư vấn sinh viên QAUTE')}">
+</head>
+<body class="d-flex flex-column min-vh-100">
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+    <!-- Hero Section -->
+    <section class="py-5 bg-primary text-white text-center" style="background: linear-gradient(135deg, #0b5ed7 0%, #003366 100%);">
+        <div class="container py-4">
+            <span class="badge bg-warning text-dark px-3 py-2 rounded-pill fw-bold mb-3">HCMUTE CONSULTING PORTAL</span>
+            <h1 class="display-4 fw-bold mb-3">Cổng Tư Vấn Sinh Viên QAUTE</h1>
+            <p class="lead mb-4 mx-auto" style="max-width: 700px;">
+                Kết nối nhanh chóng, giải đáp chính xác mọi thắc mắc về học vụ, điểm rèn luyện, học bổng và định hướng nghề nghiệp từ các Khoa & Phòng ban HCMUTE.
+            </p>
+            <div class="d-flex justify-content-center gap-3">
+                <a th:href="@{/student/requests/create}" class="btn btn-warning btn-lg px-4 fw-bold shadow">
+                    <i class="bi bi-chat-dots-fill me-2"></i>Đặt câu hỏi ngay
+                </a>
+                <a th:href="@{/faq}" class="btn btn-outline-light btn-lg px-4">
+                    <i class="bi bi-search me-2"></i>Tra cứu câu hỏi FAQ
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Các Khoa & Phòng ban hỗ trợ -->
+    <section class="py-5">
+        <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="fw-bold text-primary">Các Khoa & Phòng Ban Hỗ Trợ</h2>
+                <p class="text-muted">Chọn đúng đơn vị để câu hỏi của bạn được phản hồi nhanh nhất</p>
+            </div>
+            <div class="row g-4">
+                <div class="col-md-6 col-lg-3" th:each="dept : ${departments}">
+                    <div class="card card-custom h-100 p-3 text-center border-top border-primary border-4">
+                        <div class="card-body">
+                            <div class="display-6 text-primary mb-3">
+                                <i class="bi bi-building-check"></i>
+                            </div>
+                            <h5 class="card-title fw-bold" th:text="${dept.name}">Tên Phòng Ban</h5>
+                            <span class="badge bg-light text-primary mb-2" th:text="${dept.code}">MÃ</span>
+                            <p class="card-text text-muted small" th:text="${dept.description}">Mô tả chức năng</p>
+                        </div>
+                        <div class="card-footer bg-transparent border-0 pt-0">
+                            <small class="text-muted d-block"><i class="bi bi-telephone me-1"></i><span th:text="${dept.hotline}">Hotline</span></small>
+                            <small class="text-muted"><i class="bi bi-envelope me-1"></i><span th:text="${dept.email}">Email</span></small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Top FAQs -->
+    <section class="py-5 bg-light">
+        <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="fw-bold text-primary">Câu Hỏi Thường Gặp (FAQ)</h2>
+                <p class="text-muted">Giải đáp nhanh những thắc mắc phổ biến nhất của sinh viên</p>
+            </div>
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <div class="accordion shadow-sm" id="accordionFaq">
+                        <div class="accordion-item" th:each="faq, iterStat : ${topFaqs}">
+                            <h2 class="accordion-header" th:id="'heading' + ${faq.id}">
+                                <button class="accordion-button" th:classappend="${iterStat.index != 0 ? 'collapsed' : ''}" 
+                                        type="button" data-bs-toggle="collapse" th:data-bs-target="'#collapse' + ${faq.id}">
+                                    <i class="bi bi-question-circle-fill text-primary me-2"></i>
+                                    <span class="fw-semibold" th:text="${faq.question}">Câu hỏi</span>
+                                </button>
+                            </h2>
+                            <div th:id="'collapse' + ${faq.id}" class="accordion-collapse collapse" 
+                                 th:classappend="${iterStat.index == 0 ? 'show' : ''}" data-bs-parent="#accordionFaq">
+                                <div class="accordion-body text-secondary" th:utext="${faq.answer}">
+                                    Câu trả lời chi tiết
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-center mt-4">
+                        <a th:href="@{/faq}" class="btn btn-outline-primary px-4">Xem tất cả câu hỏi FAQ <i class="bi bi-arrow-right ms-1"></i></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+    <div th:replace="~{fragments/scripts :: scripts}"></div>
+</body>
+</html>

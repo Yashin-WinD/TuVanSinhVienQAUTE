@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/header :: header(${pageTitle})}">
+</head>
+<body class="d-flex flex-column min-vh-100">
+    <!-- Navbar -->
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+    <!-- Thông báo Flash Messages -->
+    <div class="container mt-3" th:if="${successMessage != null or errorMessage != null}">
+        <div class="alert alert-success alert-dismissible fade show" role="alert" th:if="${successMessage != null}">
+            <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMessage}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert" th:if="${errorMessage != null}">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${errorMessage}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    </div>
+
+    <!-- Nội dung chính -->
+    <main class="flex-grow-1">
+        <div th:replace="${content}"></div>
+    </main>
+
+    <!-- Footer -->
+    <div th:replace="~{fragments/footer :: footer}"></div>
+
+    <!-- Scripts -->
+    <div th:replace="~{fragments/scripts :: scripts}"></div>
+</body>
+</html>

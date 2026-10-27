@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="sidebar(activeMenu)" class="sidebar p-3">
+    <div class="text-center mb-4 pt-2">
+        <img th:src="${currentUser != null && currentUser.avatarUrl != null ? currentUser.avatarUrl : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'}" 
+             class="avatar-circle-lg mb-2" alt="Avatar">
+        <h6 class="fw-bold mb-0" th:text="${currentUser != null ? currentUser.fullName : 'Giảng viên'}">Tên Giảng viên</h6>
+        <small class="badge bg-primary text-white" th:text="${currentUser != null && currentUser.department != null ? currentUser.department.name : 'Ban Cố Vấn'}">Khoa</small>
+    </div>
+
+    <ul class="nav flex-column">
+        <li class="nav-item">
+            <a class="nav-link" th:classappend="${activeMenu == 'dashboard' ? 'active' : ''}" th:href="@{/lecturer/dashboard}">
+                <i class="bi bi-grid-fill"></i> Tổng quan
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" th:classappend="${activeMenu == 'pending' ? 'active' : ''}" th:href="@{/lecturer/requests/pending}">
+                <i class="bi bi-inbox-fill"></i> Câu hỏi chờ tiếp nhận
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" th:classappend="${activeMenu == 'schedule' ? 'active' : ''}" th:href="@{/lecturer/schedule}">
+                <i class="bi bi-calendar-event-fill"></i> Lịch hẹn tư vấn
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" th:classappend="${activeMenu == 'chat' ? 'active' : ''}" th:href="@{/lecturer/chat}">
+                <i class="bi bi-chat-dots-fill"></i> Chatbox trao đổi
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" th:href="@{/documents}">
+                <i class="bi bi-file-earmark-text-fill"></i> Công văn & Biểu mẫu
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" th:classappend="${activeMenu == 'profile' ? 'active' : ''}" th:href="@{/lecturer/profile}">
+                <i class="bi bi-person-circle"></i> Hồ sơ cá nhân
+            </a>
+        </li>
+        <li class="nav-item mt-3 pt-3 border-top">
+            <a class="nav-link text-danger" th:href="@{/logout}">
+                <i class="bi bi-box-arrow-right"></i> Đăng xuất
+            </a>
+        </li>
+    </ul>
+</div>
+</body>
+</html>

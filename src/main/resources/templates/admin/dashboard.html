@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/header :: header('Quản trị hệ thống - QAUTE Admin')}">
+</head>
+<body class="d-flex flex-column min-vh-100">
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+    <div class="container-fluid flex-grow-1">
+        <div class="row">
+            <div class="col-md-3 col-lg-2 p-0">
+                <div th:replace="~{fragments/sidebar-admin :: sidebar('dashboard')}"></div>
+            </div>
+
+            <div class="col-md-9 col-lg-10 p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h3 class="fw-bold text-dark mb-1"><i class="bi bi-speedometer2 me-2 text-danger"></i>Trung Tâm Quản Trị Hệ Thống QAUTE</h3>
+                        <p class="text-muted mb-0">Thống kê vận hành và hiệu quả giải đáp thắc mắc sinh viên HCMUTE</p>
+                    </div>
+                </div>
+
+                <!-- Thống kê tổng quan -->
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6 col-lg-3">
+                        <div class="stat-card bg-primary shadow-sm">
+                            <h6 class="text-uppercase fw-semibold mb-2">Sinh viên tham gia</h6>
+                            <h2 class="display-5 fw-bold mb-0" th:text="${studentCount}">0</h2>
+                            <i class="bi bi-people stat-icon"></i>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-3">
+                        <div class="stat-card bg-success shadow-sm">
+                            <h6 class="text-uppercase fw-semibold mb-2">Giảng viên / Cố vấn</h6>
+                            <h2 class="display-5 fw-bold mb-0" th:text="${lecturerCount}">0</h2>
+                            <i class="bi bi-person-workspace stat-icon"></i>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-3">
+                        <div class="stat-card bg-warning text-dark shadow-sm">
+                            <h6 class="text-uppercase fw-semibold mb-2">Chờ giải quyết</h6>
+                            <h2 class="display-5 fw-bold mb-0" th:text="${pendingCount}">0</h2>
+                            <i class="bi bi-hourglass-split stat-icon"></i>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-3">
+                        <div class="stat-card bg-info text-white shadow-sm">
+                            <h6 class="text-uppercase fw-semibold mb-2">Đã giải đáp hoàn tất</h6>
+                            <h2 class="display-5 fw-bold mb-0" th:text="${resolvedCount}">0</h2>
+                            <i class="bi bi-check2-all stat-icon"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Danh sách các Khoa / Đơn vị đang vận hành -->
+                <div class="card card-custom">
+                    <div class="card-header card-header-custom d-flex justify-content-between align-items-center">
+                        <span class="fs-5 fw-semibold"><i class="bi bi-building me-2 text-primary"></i>Các Khoa / Phòng Ban Trực Thuộc</span>
+                        <a th:href="@{/admin/departments}" class="btn btn-sm btn-outline-primary">Quản lý Khoa</a>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Mã đơn vị</th>
+                                        <th>Tên Khoa / Phòng ban</th>
+                                        <th>Hotline</th>
+                                        <th>Email tiếp nhận</th>
+                                        <th>Số lĩnh vực tư vấn</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="d : ${departments}">
+                                        <td><span class="badge bg-primary" th:text="${d.code}">CTSV</span></td>
+                                        <td class="fw-bold" th:text="${d.name}">Tên</td>
+                                        <td th:text="${d.hotline}">Hotline</td>
+                                        <td th:text="${d.email}">Email</td>
+                                        <td><span class="badge bg-light text-dark border" th:text="${d.fields.size()}">0</span> lĩnh vực</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+    <div th:replace="~{fragments/scripts :: scripts}"></div>
+</body>
+</html>

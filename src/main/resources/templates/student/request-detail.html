@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/header :: header('Chi tiết phiếu tư vấn - QAUTE')}">
+</head>
+<body class="d-flex flex-column min-vh-100">
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+    <div class="container-fluid flex-grow-1">
+        <div class="row">
+            <div class="col-md-3 col-lg-2 p-0">
+                <div th:replace="~{fragments/sidebar-student :: sidebar('requests')}"></div>
+            </div>
+
+            <div class="col-md-9 col-lg-10 p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <a th:href="@{/student/requests}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-left me-1"></i>Quay lại danh sách
+                    </a>
+                    <div class="d-flex gap-2">
+                        <a th:href="@{/student/chat/{id}(id=${request.id})}" class="btn btn-success">
+                            <i class="bi bi-chat-dots-fill me-1"></i>Phòng Chat Trực Tiếp
+                        </a>
+                    </div>
+                </div>
+
+                <div class="row g-4">
+                    <!-- Chi tiết câu hỏi của Sinh viên -->
+                    <div class="col-lg-7">
+                        <div class="card card-custom p-4 mb-4">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div>
+                                    <span class="badge bg-primary me-2" th:text="${request.field.department.name}">Khoa</span>
+                                    <span class="badge bg-secondary" th:text="${request.field.name}">Lĩnh vực</span>
+                                </div>
+                                <span class="badge" th:classappend="'badge-status-' + ${request.status.name()}" th:text="${request.status.displayName}">Trạng thái</span>
+                            </div>
+
+                            <h4 class="fw-bold text-dark mb-3" th:text="${request.title}">Tiêu đề</h4>
+                            <p class="text-secondary" style="white-space: pre-line;" th:text="${request.content}">Nội dung chi tiết</p>
+
+                            <!-- Ảnh minh chứng nếu có -->
+                            <div th:if="${request.attachmentUrls != null and !#strings.isEmpty(request.attachmentUrls)}" class="mt-3 p-3 bg-light rounded border">
+                                <h6 class="fw-semibold text-dark mb-2"><i class="bi bi-paperclip me-1"></i>Tệp / Minh chứng đính kèm (Cloudinary):</h6>
+                                <a th:href="${request.attachmentUrls}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-file-earmark-image me-1"></i>Xem tệp đính kèm
+                                </a>
+                            </div>
+
+                            <div class="text-muted small mt-4 pt-3 border-top d-flex justify-content-between">
+                                <span>Người gửi: <strong th:text="${request.student.fullName}">Sinh viên</strong></span>
+                                <span>Thời gian gửi: <span th:text="${#temporals.format(request.createdAt, 'dd/MM/yyyy HH:mm')}">Thời gian</span></span>
+                            </div>
+                        </div>
+
+                        <!-- Lời giải đáp từ Cố vấn / Giảng viên -->
+                        <div class="card card-custom p-4 border-start border-success border-4" th:if="${request.answerContent != null}">
+                            <h5 class="fw-bold text-success mb-3">
+                                <i class="bi bi-check-circle-fill me-2"></i>Lời Giải Đáp Từ Ban Cố Vấn
+                            </h5>
+                            <p class="text-secondary" style="white-space: pre-line;" th:text="${request.answerContent}">Nội dung trả lời</p>
+
+                            <div th:if="${request.answerFiles != null}" class="mt-2">
+                                <a th:href="${request.answerFiles}" target="_blank" class="btn btn-sm btn-outline-success">
+                                    <i class="bi bi-download me-1"></i>Tải tài liệu hướng dẫn kèm theo
+                                </a>
+                            </div>
+
+                            <div class="text-muted small mt-3 pt-2 border-top d-flex justify-content-between">
+                                <span>Người giải đáp: <strong th:text="${request.lecturer != null ? request.lecturer.fullName : 'Cố vấn'}">Giảng viên</strong></span>
+                                <span>Thời gian: <span th:text="${#temporals.format(request.resolvedAt, 'dd/MM/yyyy HH:mm')}">Thời gian</span></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sidebar đánh giá và thông tin tiếp nhận -->
+                    <div class="col-lg-5">
+                        <div class="card card-custom p-4 mb-4">
+                            <h5 class="fw-bold text-primary mb-3"><i class="bi bi-person-badge me-2"></i>Giảng Viên Phụ Trách</h5>
+                            <div th:if="${request.lecturer != null}" class="d-flex align-items-center gap-3">
+                                <img th:src="${request.lecturer.avatarUrl != null ? request.lecturer.avatarUrl : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'}" 
+                                     class="avatar-circle-lg" alt="Avatar">
+                                <div>
+                                    <h6 class="fw-bold mb-1" th:text="${request.lecturer.fullName}">TS. Nguyễn Văn A</h6>
+                                    <p class="text-muted small mb-1" th:text="${request.lecturer.email}">Email</p>
+                                    <span class="badge bg-light text-primary" th:text="${request.lecturer.department != null ? request.lecturer.department.name : 'Ban Cố Vấn'}">Khoa</span>
+                                </div>
+                            </div>
+                            <div th:if="${request.lecturer == null}" class="alert alert-warning py-2 small mb-0">
+                                <i class="bi bi-hourglass-split me-1"></i>Hệ thống đang tiến hành phân công giảng viên chuyên môn tiếp nhận câu hỏi của bạn.
+                            </div>
+                        </div>
+
+                        <!-- Đánh giá mức độ hài lòng (Rating Star) -->
+                        <div class="card card-custom p-4" th:if="${request.status.name() == 'RESOLVED' or request.status.name() == 'CLOSED'}">
+                            <h5 class="fw-bold text-dark mb-2"><i class="bi bi-star-fill text-warning me-2"></i>Đánh Giá Chất Lượng</h5>
+                            <p class="text-muted small mb-3">Mức độ hài lòng của bạn đối với câu trả lời tư vấn này:</p>
+
+                            <!-- Nếu chưa đánh giá -->
+                            <form th:if="${request.rating == null}" th:action="@{/student/requests/{id}/rate(id=${request.id})}" th:object="${feedbackDto}" method="post">
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Chọn số sao (1 - 5):</label>
+                                    <select class="form-select" th:field="*{rating}" required>
+                                        <option value="5">⭐⭐⭐⭐⭐ 5 Sao - Rất hài lòng</option>
+                                        <option value="4">⭐⭐⭐⭐ 4 Sao - Hài lòng</option>
+                                        <option value="3">⭐⭐⭐ 3 Sao - Bình thường</option>
+                                        <option value="2">⭐⭐ 2 Sao - Chưa thỏa đáng</option>
+                                        <option value="1">⭐ 1 Sao - Rất không hài lòng</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Nhận xét thêm:</label>
+                                    <textarea class="form-control" th:field="*{feedback}" rows="3" placeholder="Ý kiến đóng góp để cải thiện dịch vụ tư vấn..."></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-warning w-100 fw-bold">Gửi Đánh Giá</button>
+                            </form>
+
+                            <!-- Nếu đã đánh giá xong -->
+                            <div th:if="${request.rating != null}" class="p-3 bg-light rounded text-center">
+                                <div class="fs-4 text-warning mb-2">
+                                    <span th:each="i : ${#numbers.sequence(1, request.rating)}">★</span>
+                                </div>
+                                <p class="mb-0 fw-semibold text-dark" th:text="${request.feedback != null ? request.feedback : 'Bạn đã đánh giá phiếu này.'}">Nhận xét</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+    <div th:replace="~{fragments/scripts :: scripts}"></div>
+</body>
+</html>

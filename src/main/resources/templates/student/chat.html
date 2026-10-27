@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/header :: header('Chatbox tư vấn sinh viên - QAUTE')}">
+</head>
+<body class="d-flex flex-column min-vh-100 bg-light">
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+    <div class="container-fluid flex-grow-1 py-3 px-md-4">
+        <div class="row">
+            <!-- Sidebar sinh viên -->
+            <div class="col-md-3 col-lg-2 p-0">
+                <div th:replace="~{fragments/sidebar-student :: sidebar('chat')}"></div>
+            </div>
+
+            <!-- Nội dung chính: Chatbox Messenger -->
+            <div class="col-md-9 col-lg-10 p-3 p-md-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h4 class="fw-bold text-primary mb-1">
+                            <i class="bi bi-chat-dots-fill me-2"></i>Hộp Thoại Tư Vấn Trực Tuyến
+                        </h4>
+                        <p class="text-muted small mb-0">Trao đổi trực tiếp trong thời gian thực với Giảng viên và Ban Quản trị</p>
+                    </div>
+                    <button type="button" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#newChatModal">
+                        <i class="bi bi-plus-lg me-1"></i>Hỏi tư vấn mới
+                    </button>
+                </div>
+
+                <!-- Chatbox Layout -->
+                <div class="chatbox-layout">
+                    <!-- Cột trái: Danh sách cuộc trò chuyện -->
+                    <div class="chatbox-sidebar">
+                        <div class="chatbox-sidebar-header">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h6 class="fw-bold mb-0 text-dark">
+                                    <i class="bi bi-chat-left-text me-1 text-primary"></i>Hội thoại (<span th:text="${consultations.size()}">0</span>)
+                                </h6>
+                            </div>
+                            <div class="chatbox-search-box">
+                                <i class="bi bi-search"></i>
+                                <input type="text" id="chatSearchInput" class="chatbox-search-input" placeholder="Tìm giảng viên, đề tài...">
+                            </div>
+                        </div>
+
+                        <div class="chatbox-sidebar-list">
+                            <div th:if="${#lists.isEmpty(consultations)}" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
+                                <span class="small">Chưa có câu hỏi nào. Hãy tạo câu hỏi đầu tiên!</span>
+                            </div>
+
+                            <a th:each="c : ${consultations}"
+                               th:href="@{/student/chat(id=${c.id})}"
+                               class="conversation-card"
+                               th:classappend="${request != null && c.id == request.id ? 'active' : ''}"
+                               th:attr="data-id=${c.id},data-name=${c.lecturer != null ? c.lecturer.fullName : 'Ban Cố Vấn'},data-title=${c.title}">
+                                <div class="conversation-avatar-wrap">
+                                    <img th:src="${c.lecturer != null && c.lecturer.avatarUrl != null ? c.lecturer.avatarUrl : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'}"
+                                         class="conversation-avatar" alt="Avatar">
+                                    <span class="status-indicator-dot"></span>
+                                </div>
+                                <div class="conversation-info">
+                                    <div class="conversation-title-row">
+                                        <span class="conversation-partner-name" th:text="${c.lecturer != null ? c.lecturer.fullName : 'Ban Cố Vấn Học Tập'}">Tên Giảng viên</span>
+                                        <span class="conversation-time" th:text="${#temporals.format(c.createdAt, 'dd/MM')}">01/01</span>
+                                    </div>
+                                    <span class="conversation-subject" th:text="${c.title}">Tiêu đề phiếu tư vấn</span>
+                                    <div class="conversation-footer-row">
+                                        <span th:if="${c.status.name() == 'PENDING'}" class="badge bg-warning-subtle text-warning border border-warning-subtle py-1 px-2" style="font-size: 0.7rem;">Chờ nhận</span>
+                                        <span th:if="${c.status.name() == 'ASSIGNED'}" class="badge bg-info-subtle text-info border border-info-subtle py-1 px-2" style="font-size: 0.7rem;">Đã tiếp nhận</span>
+                                        <span th:if="${c.status.name() == 'IN_PROGRESS'}" class="badge bg-primary-subtle text-primary border border-primary-subtle py-1 px-2" style="font-size: 0.7rem;">Đang trao đổi</span>
+                                        <span th:if="${c.status.name() == 'RESOLVED'}" class="badge bg-success-subtle text-success border border-success-subtle py-1 px-2" style="font-size: 0.7rem;">Đã giải đáp</span>
+                                        <small class="text-muted" th:text="${'#' + c.id}">#1</small>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Cột phải: Khung chat chính -->
+                    <div class="chatbox-main" th:if="${request != null}">
+                        <!-- Chat Header -->
+                        <div class="chatbox-header">
+                            <div class="chatbox-header-partner">
+                                <img id="chatPartnerAvatar"
+                                     th:src="${request.lecturer != null && request.lecturer.avatarUrl != null ? request.lecturer.avatarUrl : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'}" 
+                                     class="chatbox-header-avatar" alt="Avatar">
+                                <div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <h6 class="mb-0 fw-bold" id="chatPartnerName" th:text="${request.lecturer != null ? request.lecturer.fullName : 'Ban Cố Vấn & Admin'}">Giảng viên / Admin</h6>
+                                        <span id="chatPartnerRoleBadge" class="badge-role-lecturer" th:if="${request.lecturer != null}">Giảng viên</span>
+                                        <span class="badge-role-admin" th:if="${request.lecturer == null}">Hệ thống / Admin</span>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2 mt-1">
+                                        <span class="pulse-indicator">
+                                            <span class="dot"></span> Realtime STOMP
+                                        </span>
+                                        <span class="text-muted small">•</span>
+                                        <small class="text-muted text-truncate" style="max-width: 320px;" id="chatTitle" th:text="${request.title}">Tiêu đề tư vấn</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <a th:href="@{/student/requests/{id}(id=${request.id})}" class="btn btn-outline-secondary btn-sm rounded-pill" title="Xem chi tiết phiếu tư vấn">
+                                    <i class="bi bi-box-arrow-up-right me-1"></i>Chi tiết phiếu
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Khung tin nhắn đã nạp -->
+                        <div class="chatbox-messages" id="chatMessages">
+                            <div th:each="msg : ${messages}" 
+                                 class="message-item" 
+                                 th:classappend="${msg.sender.id == currentUser.id ? 'outgoing' : 'incoming'}">
+                                <img th:src="${msg.sender.avatarUrl != null ? msg.sender.avatarUrl : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'}" 
+                                     class="avatar-circle" alt="Avatar">
+                                <div>
+                                    <div class="small text-muted mb-1" th:classappend="${msg.sender.id == currentUser.id ? 'text-end' : ''}">
+                                        <strong th:text="${msg.sender.fullName}">Người gửi</strong>
+                                        <span class="badge-role-student ms-1" th:if="${msg.sender.role.name() == 'ROLE_STUDENT'}">Sinh viên</span>
+                                        <span class="badge-role-lecturer ms-1" th:if="${msg.sender.role.name() == 'ROLE_LECTURER'}">Giảng viên</span>
+                                        <span class="badge-role-admin ms-1" th:if="${msg.sender.role.name() == 'ROLE_ADMIN'}">Admin</span>
+                                    </div>
+                                    <div class="message-bubble">
+                                        <div th:text="${msg.content}">Nội dung</div>
+                                        <div th:if="${msg.mediaUrl != null}" class="mt-2">
+                                            <a th:href="${msg.mediaUrl}" target="_blank">
+                                                <img th:src="${msg.mediaUrl}" class="message-image" alt="Đính kèm">
+                                            </a>
+                                        </div>
+                                        <div class="message-time" th:text="${#temporals.format(msg.sentAt, 'HH:mm')}">12:00</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Khung soạn thảo tin nhắn -->
+                        <div class="chatbox-footer">
+                            <label for="chatFileInput" class="btn-chat-action" title="Gửi hình ảnh minh chứng">
+                                <i class="bi bi-image fs-5"></i>
+                            </label>
+                            <input type="file" id="chatFileInput" accept="image/*" style="display: none;">
+
+                            <input type="text" id="messageInput" class="chatbox-input" 
+                                   placeholder="Nhập nội dung tin nhắn gửi Giảng viên hoặc Admin..." autofocus autocomplete="off">
+
+                            <button type="button" id="btnSendMessage" class="btn-send-message" title="Gửi tin nhắn">
+                                <i class="bi bi-send-fill fs-5"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Trạng thái trống nếu chưa có yêu cầu nào -->
+                    <div class="chatbox-empty-state" th:if="${request == null}">
+                        <div class="chatbox-empty-icon">
+                            <i class="bi bi-chat-heart-fill"></i>
+                        </div>
+                        <h5 class="fw-bold text-dark mb-2">Hộp thoại tư vấn trực tuyến</h5>
+                        <p class="text-muted mb-4" style="max-width: 420px;">
+                            Bạn hiện chưa có câu hỏi nào trong danh sách. Hãy tạo một câu hỏi tư vấn mới để bắt đầu trao đổi với Giảng viên và Ban Quản trị.
+                        </p>
+                        <button type="button" class="btn btn-primary rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#newChatModal">
+                            <i class="bi bi-plus-circle me-2"></i>Tạo câu hỏi tư vấn ngay
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Đặt câu hỏi tư vấn nhanh -->
+    <div class="modal fade" id="newChatModal" tabindex="-1" aria-labelledby="newChatModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content shadow border-0">
+                <form th:action="@{/student/requests/create}" method="post" enctype="multipart/form-data">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title fw-bold" id="newChatModalLabel">
+                            <i class="bi bi-question-diamond-fill me-2"></i>Bắt Đầu Phiên Tư Vấn Mới
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Lĩnh vực tư vấn <span class="text-danger">*</span></label>
+                            <select class="form-select" name="fieldId" required>
+                                <option value="" disabled selected>-- Chọn lĩnh vực cần tư vấn --</option>
+                                <option th:each="f : ${fields}" th:value="${f.id}" th:text="${f.department.name + ' - ' + f.name}">Khoa CNTT - Học tập</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Tiêu đề câu hỏi <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="title" placeholder="VD: Thắc mắc về đăng ký môn học học kỳ 2" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Nội dung chi tiết <span class="text-danger">*</span></label>
+                            <textarea class="form-control" name="content" rows="3" placeholder="Mô tả cụ thể câu hỏi hoặc vấn đề của bạn..." required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Mức độ ưu tiên</label>
+                            <select class="form-select" name="priority">
+                                <option value="LOW">Bình thường (Low)</option>
+                                <option value="MEDIUM" selected>Trung bình (Medium)</option>
+                                <option value="HIGH">Quan trọng (High)</option>
+                                <option value="URGENT">Khẩn cấp (Urgent)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary rounded-pill px-3" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold">
+                            <i class="bi bi-send-check me-1"></i>Gửi và mở Chat
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+    <div th:replace="~{fragments/scripts :: scripts}"></div>
+
+    <!-- Khởi tạo kết nối STOMP -->
+    <script th:inline="javascript" th:if="${request != null}">
+        /*<![CDATA[*/
+        const consultationId = /*[[${request.id}]]*/ 1;
+        const currentUserId = /*[[${currentUser.id}]]*/ 1;
+        const currentUserName = /*[[${currentUser.fullName}]]*/ 'Sinh viên';
+        const currentUserAvatar = /*[[${currentUser.avatarUrl}]]*/ '';
+        const currentUserRole = /*[[${currentUser.role.name()}]]*/ 'ROLE_STUDENT';
+
+        document.addEventListener('DOMContentLoaded', function () {
+            initChat(consultationId, currentUserId, currentUserName, currentUserAvatar, currentUserRole);
+        });
+        /*]]>*/
+    </script>
+</body>
+</html>
