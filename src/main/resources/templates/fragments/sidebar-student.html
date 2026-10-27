@@ -1,56 +1,64 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<body>
-<div th:fragment="sidebar(activeMenu)" class="sidebar p-3">
-    <div class="text-center mb-4 pt-2">
-        <img th:src="${currentUser != null && currentUser.avatarUrl != null ? currentUser.avatarUrl : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'}" 
-             class="avatar-circle-lg mb-2" alt="Avatar">
-        <h6 class="fw-bold mb-0" th:text="${currentUser != null ? currentUser.fullName : 'Sinh viên'}">Tên Sinh viên</h6>
-        <small class="text-muted" th:text="${currentUser != null ? currentUser.userCode : 'MSSV'}">MSSV</small>
-    </div>
 
-    <ul class="nav flex-column">
-        <li class="nav-item">
-            <a class="nav-link" th:classappend="${activeMenu == 'dashboard' ? 'active' : ''}" th:href="@{/student/dashboard}">
-                <i class="bi bi-grid-fill"></i> Tổng quan
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" th:classappend="${activeMenu == 'create' ? 'active' : ''}" th:href="@{/student/requests/create}">
-                <i class="bi bi-question-diamond-fill"></i> Đặt câu hỏi tư vấn
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" th:classappend="${activeMenu == 'requests' ? 'active' : ''}" th:href="@{/student/requests}">
-                <i class="bi bi-journal-text"></i> Danh sách câu hỏi
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" th:classappend="${activeMenu == 'appointments' ? 'active' : ''}" th:href="@{/student/appointments}">
-                <i class="bi bi-calendar-check-fill"></i> Lịch hẹn tư vấn
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" th:classappend="${activeMenu == 'chat' ? 'active' : ''}" th:href="@{/student/chat}">
-                <i class="bi bi-chat-dots-fill"></i> Chatbox tư vấn
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" th:href="@{/documents}">
-                <i class="bi bi-file-earmark-text-fill"></i> Công văn & Biểu mẫu
-            </a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" th:classappend="${activeMenu == 'profile' ? 'active' : ''}" th:href="@{/student/profile}">
-                <i class="bi bi-person-circle"></i> Hồ sơ cá nhân
-            </a>
-        </li>
-        <li class="nav-item mt-3 pt-3 border-top">
-            <a class="nav-link text-danger" th:href="@{/logout}">
-                <i class="bi bi-box-arrow-right"></i> Đăng xuất
-            </a>
-        </li>
-    </ul>
-</div>
+<body>
+    <div th:fragment="sidebar(activeMenu)" class="sidebar p-3">
+        <div class="text-center mb-4 pt-2">
+            <img th:src="${currentUser != null && currentUser.avatarUrl != null ? currentUser.avatarUrl : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'}"
+                class="avatar-circle-lg mb-2" alt="Avatar">
+            <h6 class="fw-bold mb-0" th:text="${currentUser != null ? currentUser.fullName : 'Sinh viên'}">Tên Sinh viên
+            </h6>
+            <small class="text-muted" th:text="${currentUser != null ? currentUser.userCode : 'MSSV'}">MSSV</small>
+        </div>
+
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link" th:classappend="${activeMenu == 'dashboard' ? 'active' : ''}"
+                    th:href="@{/student/dashboard}">
+                    <i class="bi bi-grid-fill"></i> Tổng quan
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" th:classappend="${activeMenu == 'create' ? 'active' : ''}"
+                    th:href="@{/student/requests/create}">
+                    <i class="bi bi-question-diamond-fill"></i> Đặt câu hỏi tư vấn
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" th:classappend="${activeMenu == 'requests' ? 'active' : ''}"
+                    th:href="@{/student/requests}">
+                    <i class="bi bi-journal-text"></i> Danh sách câu hỏi
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" th:classappend="${activeMenu == 'appointments' ? 'active' : ''}"
+                    th:href="@{/student/appointments}">
+                    <i class="bi bi-calendar-check-fill"></i> Lịch hẹn tư vấn
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" th:classappend="${activeMenu == 'chat' ? 'active' : ''}" th:href="@{/student/chat}">
+                    <i class="bi bi-chat-dots-fill"></i> Chatbox tư vấn
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" th:href="@{/documents}">
+                    <i class="bi bi-file-earmark-text-fill"></i> Công văn & Biểu mẫu
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" th:classappend="${activeMenu == 'profile' ? 'active' : ''}"
+                    th:href="@{/student/profile}">
+                    <i class="bi bi-person-circle"></i> Hồ sơ cá nhân
+                </a>
+            </li>
+            <li class="nav-item mt-3 pt-3 border-top">
+                <a class="nav-link text-danger" th:href="@{/logout}">
+                    <i class="bi bi-box-arrow-right"></i> Đăng xuất
+                </a>
+            </li>
+        </ul>
+    </div>
 </body>
+
 </html>
