@@ -16,6 +16,16 @@
                     <h4 class="fw-bold text-primary mb-0"><i class="bi bi-calendar-event me-2"></i>Quản Lý Lịch Hẹn Tư Vấn</h4>
                 </div>
 
+                <!-- Alert Thông báo -->
+                <div th:if="${successMessage}" class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="bi bi-check-circle-fill me-2"></i><span th:text="${successMessage}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                <div th:if="${errorMessage}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${errorMessage}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+
                 <div class="row g-4">
                     <!-- Danh sách các cuộc hẹn -->
                     <div class="col-lg-8">
@@ -73,7 +83,7 @@
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label fw-semibold">Thời gian hẹn</label>
-                                    <input type="datetime-local" class="form-control" th:field="*{meetingTime}" required>
+                                    <input type="datetime-local" class="form-control" id="meetingTimeInput" th:field="*{meetingTime}" required>
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label fw-semibold">Địa điểm / Link phòng họp</label>
@@ -95,5 +105,17 @@
 
     <div th:replace="~{fragments/footer :: footer}"></div>
     <div th:replace="~{fragments/scripts :: scripts}"></div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const meetingTimeInput = document.getElementById("meetingTimeInput");
+            if (meetingTimeInput) {
+                // Khóa không cho chọn ngày giờ trong quá khứ trên giao diện
+                const now = new Date();
+                now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                meetingTimeInput.min = now.toISOString().slice(0, 16);
+            }
+        });
+    </script>
 </body>
 </html>

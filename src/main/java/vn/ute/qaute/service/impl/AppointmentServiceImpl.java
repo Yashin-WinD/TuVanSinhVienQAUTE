@@ -8,12 +8,14 @@ import vn.ute.qaute.entity.Appointment;
 import vn.ute.qaute.entity.ConsultationRequest;
 import vn.ute.qaute.entity.User;
 import vn.ute.qaute.entity.enums.AppointmentStatus;
+import vn.ute.qaute.exception.BadRequestException;
 import vn.ute.qaute.exception.ResourceNotFoundException;
 import vn.ute.qaute.repository.AppointmentRepository;
 import vn.ute.qaute.repository.ConsultationRequestRepository;
 import vn.ute.qaute.service.AppointmentService;
 import vn.ute.qaute.service.NotificationService;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -38,6 +40,24 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Override
     @Transactional
     public Appointment createAppointment(CreateAppointmentDto dto, User lecturer) {
+        if (dto.getMeetingTime() == null) {
+            throw new BadRequestException("Thời gian hẹn không được để trống!");
+        }
+        if (dto.getMeetingTime().isBefore(LocalDateTime.now())) {
+            throw new BadRequestException("Thời gian hẹn không được bé hơn thời gian hiện tại!");
+        }
+
+        // Chống spam: Kiểm tra xem phiếu tư vấn này đã có lịch hẹn đang chờ hoặc cùng khung giờ chưa
+        List<Appointment> existingAppointments = appointmentRepository.findByConsultationId(dto.getConsultationId());
+        boolean hasDuplicate = existingAppointments.stream().anyMatch(a ->
+                a.getStatus() == AppointmentStatus.SCHEDULED
+                && a.getMeetingTime() != null
+                && Math.abs(java.time.Duration.between(a.getMeetingTime(), dto.getMeetingTime()).toMinutes()) < 30
+        );
+        if (hasDuplicate) {
+            throw new BadRequestException("Phiếu tư vấn này đã có lịch hẹn đang lên lịch hoặc gần khung giờ này! Vui lòng không gửi yêu cầu trùng lặp.");
+        }
+
         ConsultationRequest consultation = requestRepository.findById(dto.getConsultationId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phiếu tư vấn"));
 
