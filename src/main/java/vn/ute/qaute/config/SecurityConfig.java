@@ -72,7 +72,7 @@ public class SecurityConfig {
                 .requestMatchers("/", "/faq", "/documents/**", "/about", "/login", "/register", "/logout", "/forgot-password", "/reset-password").permitAll()
                 .requestMatchers("/api/v1/auth/**", "/api/v1/upload/**").permitAll()
                 // WebSocket endpoint
-                .requestMatchers("/ws-qaute/**").permitAll()
+                .requestMatchers("/ws-qaute", "/ws-qaute/**").permitAll()
                 // Phân quyền theo vai trò
                 .requestMatchers("/student/**").hasRole("STUDENT")
                 .requestMatchers("/lecturer/**").hasRole("LECTURER")

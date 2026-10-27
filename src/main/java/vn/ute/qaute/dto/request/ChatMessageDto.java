@@ -1,5 +1,6 @@
 package vn.ute.qaute.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import vn.ute.qaute.entity.enums.MessageType;
 import java.time.LocalDateTime;
 
@@ -15,6 +16,8 @@ public class ChatMessageDto {
     private String mediaUrl;
     private MessageType messageType = MessageType.TEXT;
     private Boolean isRead = false;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime sentAt;
 
     public ChatMessageDto() {

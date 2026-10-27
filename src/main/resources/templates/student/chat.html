@@ -227,9 +227,19 @@
         const currentUserAvatar = /*[[${currentUser.avatarUrl}]]*/ '';
         const currentUserRole = /*[[${currentUser.role.name()}]]*/ 'ROLE_STUDENT';
 
-        document.addEventListener('DOMContentLoaded', function () {
-            initChat(consultationId, currentUserId, currentUserName, currentUserAvatar, currentUserRole);
-        });
+        function startChat() {
+            if (typeof initChat === 'function') {
+                initChat(consultationId, currentUserId, currentUserName, currentUserAvatar, currentUserRole);
+            } else {
+                setTimeout(startChat, 150);
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', startChat);
+        } else {
+            startChat();
+        }
         /*]]>*/
     </script>
 </body>
