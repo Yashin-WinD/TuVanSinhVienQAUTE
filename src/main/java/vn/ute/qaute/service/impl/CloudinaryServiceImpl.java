@@ -40,6 +40,15 @@ public class CloudinaryServiceImpl implements CloudinaryService {
 
     @Override
     public CloudinaryResponseDto uploadImage(MultipartFile file, String folderName) {
+        return uploadInternal(file, folderName, "image");
+    }
+
+    @Override
+    public CloudinaryResponseDto uploadFile(MultipartFile file, String folderName) {
+        return uploadInternal(file, folderName, "auto");
+    }
+
+    private CloudinaryResponseDto uploadInternal(MultipartFile file, String folderName, String defaultResourceType) {
         if (file == null || file.isEmpty()) {
             return null;
         }
@@ -53,40 +62,69 @@ public class CloudinaryServiceImpl implements CloudinaryService {
             return saveLocally(file, folderName);
         }
 
+        String originalFilename = file.getOriginalFilename();
+        String subFolder = (folderName != null && !folderName.trim().isEmpty()) ? folderName.trim() : "general";
+
         Map<String, Object> params = new HashMap<>();
-        params.put("resource_type", "auto");
-        if (folderName != null && !folderName.trim().isEmpty()) {
-            params.put("folder", "qaute/" + folderName.trim());
+        params.put("resource_type", defaultResourceType != null ? defaultResourceType : "auto");
+        params.put("folder", "qaute/" + subFolder);
+        params.put("use_filename", true);
+        params.put("unique_filename", true);
+        if (originalFilename != null) {
+            params.put("filename_override", originalFilename);
         }
 
-        // Thử upload với các chế độ (Signed upload có/không preset, hoặc Unsigned upload)
         Map<?, ?> uploadResult = null;
         Exception lastException = null;
+        Path tempFile = null;
 
-        // 1. Thử Signed Upload (với API Key & API Secret)
         try {
-            Map<String, Object> signedParams = new HashMap<>(params);
-            if (uploadPreset != null && !uploadPreset.trim().isEmpty()) {
-                signedParams.put("upload_preset", uploadPreset.trim());
-            }
-            uploadResult = cloudinary.uploader().upload(file.getBytes(), signedParams);
-        } catch (Exception e) {
-            lastException = e;
-            // Nếu lỗi do upload_preset xung đột với signed upload, thử signed upload không dùng preset
+            // Tạo tệp tạm thời để upload (hỗ trợ uploadLarge cho cả file lớn > 10MB)
+            String prefix = "cld_upload_";
+            String suffix = (originalFilename != null && originalFilename.contains(".")) 
+                    ? originalFilename.substring(originalFilename.lastIndexOf(".")) 
+                    : ".tmp";
+            tempFile = Files.createTempFile(prefix, suffix);
+            Files.copy(file.getInputStream(), tempFile, StandardCopyOption.REPLACE_EXISTING);
+
+            // 1. Thử Signed Upload chuẩn (Dùng API Key & API Secret, KHÔNG nhét unsigned upload_preset vào)
             try {
-                uploadResult = cloudinary.uploader().upload(file.getBytes(), params);
-                lastException = null;
-            } catch (Exception e2) {
-                lastException = e2;
-                // Nếu vẫn lỗi và có upload_preset, thử Unsigned Upload
-                if (uploadPreset != null && !uploadPreset.trim().isEmpty()) {
-                    try {
-                        uploadResult = cloudinary.uploader().unsignedUpload(file.getBytes(), uploadPreset.trim(), params);
-                        lastException = null;
-                    } catch (Exception e3) {
-                        lastException = e3;
+                logger.info("Đang tải tệp '{}' lên Cloudinary (Signed uploadLarge, resource_type: {})...", originalFilename, params.get("resource_type"));
+                uploadResult = cloudinary.uploader().uploadLarge(tempFile.toFile(), params);
+            } catch (Exception e1) {
+                lastException = e1;
+                logger.warn("Signed Upload thất bại ({}), đang thử Signed Upload thông thường...", e1.getMessage());
+
+                try {
+                    uploadResult = cloudinary.uploader().upload(tempFile.toFile(), params);
+                    lastException = null;
+                } catch (Exception e2) {
+                    lastException = e2;
+                    logger.warn("Signed Upload thông thường thất bại ({}), đang thử Unsigned Upload...", e2.getMessage());
+
+                    // 2. Nếu Signed thất bại và có upload_preset, thử Unsigned Upload
+                    if (uploadPreset != null && !uploadPreset.trim().isEmpty()) {
+                        try {
+                            Map<String, Object> unsignedParams = new HashMap<>();
+                            unsignedParams.put("resource_type", defaultResourceType != null ? defaultResourceType : "auto");
+                            uploadResult = cloudinary.uploader().unsignedUpload(tempFile.toFile(), uploadPreset.trim(), unsignedParams);
+                            lastException = null;
+                        } catch (Exception e3) {
+                            lastException = e3;
+                            logger.warn("Unsigned Upload thất bại: {}", e3.getMessage());
+                        }
                     }
                 }
+            }
+        } catch (Exception ex) {
+            lastException = ex;
+            logger.error("Lỗi chuẩn bị tệp upload: {}", ex.getMessage());
+        } finally {
+            // Xóa file tạm thời sau khi xử lý xong
+            if (tempFile != null) {
+                try {
+                    Files.deleteIfExists(tempFile);
+                } catch (IOException ignored) {}
             }
         }
 
@@ -97,22 +135,19 @@ public class CloudinaryServiceImpl implements CloudinaryService {
             Long bytes = uploadResult.get("bytes") != null ? ((Number) uploadResult.get("bytes")).longValue() : file.getSize();
             String resourceType = (String) uploadResult.get("resource_type");
 
-            logger.info("Tải file lên Cloudinary THÀNH CÔNG: {}", secureUrl);
+            logger.info(">>> TẢI FILE LÊN CLOUDINARY THÀNH CÔNG: {}", secureUrl);
             return new CloudinaryResponseDto(publicId, secureUrl, format, bytes, resourceType);
         } else {
             String errorMsg = lastException != null ? lastException.getMessage() : "Unknown Cloudinary error";
             logger.warn("====================================================================");
             logger.warn("KHÔNG THỂ TẢI LÊN CLOUDINARY: {}", errorMsg);
+            if (lastException != null) {
+                logger.warn("Chi tiết lỗi Cloudinary:", lastException);
+            }
             logger.warn("-> Hệ thống tự động chuyển sang lưu trữ cục bộ: /uploads/{}/", folderName);
-            logger.warn("-> Vui lòng kiểm tra lại 'cloud-name', 'api-key', 'api-secret' trong application.properties!");
             logger.warn("====================================================================");
             return saveLocally(file, folderName);
         }
-    }
-
-    @Override
-    public CloudinaryResponseDto uploadFile(MultipartFile file, String folderName) {
-        return uploadImage(file, folderName);
     }
 
     private CloudinaryResponseDto saveLocally(MultipartFile file, String folderName) {

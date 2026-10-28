@@ -43,7 +43,7 @@ public class DocumentServiceImpl implements DocumentService {
             fileType = originalFilename.substring(originalFilename.lastIndexOf(".") + 1).toUpperCase();
         }
 
-        CloudinaryResponseDto uploadRes = cloudinaryService.uploadImage(file, "documents");
+        CloudinaryResponseDto uploadRes = cloudinaryService.uploadFile(file, "documents");
         if (uploadRes == null || uploadRes.getUrl() == null) {
             throw new BadRequestException("Không thể lưu trữ tệp tin. Vui lòng thử lại!");
         }
