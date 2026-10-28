@@ -30,7 +30,11 @@ public interface ConsultationRequestRepository extends JpaRepository<Consultatio
            "(:fieldId IS NULL OR r.field.id = :fieldId) AND " +
            "(:status IS NULL OR r.status = :status) AND " +
            "(:priority IS NULL OR r.priority = :priority) AND " +
-           "(:keyword IS NULL OR :keyword = '' OR LOWER(r.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(r.content) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+           "(:keyword IS NULL OR :keyword = '' OR " +
+           "LOWER(r.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "LOWER(r.content) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "LOWER(r.student.userCode) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "LOWER(r.student.fullName) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
            "ORDER BY r.createdAt DESC")
     Page<ConsultationRequest> filterRequests(
             @Param("studentId") Long studentId,
@@ -42,4 +46,3 @@ public interface ConsultationRequestRepository extends JpaRepository<Consultatio
             @Param("keyword") String keyword,
             Pageable pageable);
 }
-

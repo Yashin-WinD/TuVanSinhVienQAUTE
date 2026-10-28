@@ -23,16 +23,18 @@ public class UserDetailsImpl implements UserDetails {
     private String password;
 
     private String avatarUrl;
+    private boolean active;
     private Collection<? extends GrantedAuthority> authorities;
 
     public UserDetailsImpl(Long id, String username, String fullName, String email, String password,
-                           String avatarUrl, Collection<? extends GrantedAuthority> authorities) {
+                           String avatarUrl, boolean active, Collection<? extends GrantedAuthority> authorities) {
         this.id = id;
         this.username = username;
         this.fullName = fullName;
         this.email = email;
         this.password = password;
         this.avatarUrl = avatarUrl;
+        this.active = active;
         this.authorities = authorities;
     }
 
@@ -46,6 +48,7 @@ public class UserDetailsImpl implements UserDetails {
                 user.getEmail(),
                 user.getPassword(),
                 user.getAvatarUrl(),
+                Boolean.TRUE.equals(user.getIsActive()),
                 Collections.singletonList(authority)
         );
     }
@@ -88,7 +91,7 @@ public class UserDetailsImpl implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return true;
+        return active;
     }
 
     @Override
@@ -98,7 +101,7 @@ public class UserDetailsImpl implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return active;
     }
 
     @Override

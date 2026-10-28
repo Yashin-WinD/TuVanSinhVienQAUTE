@@ -48,26 +48,35 @@ public class CloudinaryServiceImpl implements CloudinaryService {
         return uploadInternal(file, folderName, "auto");
     }
 
+    private String sanitizeFolderName(String folderName) {
+        if (folderName == null || folderName.trim().isEmpty()) {
+            return "general";
+        }
+        String cleaned = folderName.trim().replaceAll("[^a-zA-Z0-9_-]", "");
+        return cleaned.isEmpty() ? "general" : cleaned;
+    }
+
     private CloudinaryResponseDto uploadInternal(MultipartFile file, String folderName, String defaultResourceType) {
         if (file == null || file.isEmpty()) {
             return null;
         }
+
+        String safeFolder = sanitizeFolderName(folderName);
 
         // Nếu thông tin Cloudinary là mẫu hoặc chưa cấu hình hợp lệ, lưu trực tiếp vào server cục bộ
         if (cloudName == null || cloudName.trim().isEmpty() 
                 || cloudName.equalsIgnoreCase("test1") 
                 || cloudName.equalsIgnoreCase("test-cloud")
                 || cloudName.startsWith("test")) {
-            logger.info("Đang ở chế độ lưu trữ tệp cục bộ (Cloudinary: {}). Thư mục: /uploads/{}/", cloudName, folderName);
-            return saveLocally(file, folderName);
+            logger.info("Đang ở chế độ lưu trữ tệp cục bộ (Cloudinary: {}). Thư mục: /uploads/{}/", cloudName, safeFolder);
+            return saveLocally(file, safeFolder);
         }
 
         String originalFilename = file.getOriginalFilename();
-        String subFolder = (folderName != null && !folderName.trim().isEmpty()) ? folderName.trim() : "general";
 
         Map<String, Object> params = new HashMap<>();
         params.put("resource_type", defaultResourceType != null ? defaultResourceType : "auto");
-        params.put("folder", "qaute/" + subFolder);
+        params.put("folder", "qaute/" + safeFolder);
         params.put("use_filename", true);
         params.put("unique_filename", true);
         if (originalFilename != null) {
@@ -144,16 +153,20 @@ public class CloudinaryServiceImpl implements CloudinaryService {
             if (lastException != null) {
                 logger.warn("Chi tiết lỗi Cloudinary:", lastException);
             }
-            logger.warn("-> Hệ thống tự động chuyển sang lưu trữ cục bộ: /uploads/{}/", folderName);
+            logger.warn("-> Hệ thống tự động chuyển sang lưu trữ cục bộ: /uploads/{}/", safeFolder);
             logger.warn("====================================================================");
-            return saveLocally(file, folderName);
+            return saveLocally(file, safeFolder);
         }
     }
 
     private CloudinaryResponseDto saveLocally(MultipartFile file, String folderName) {
         try {
-            String subFolder = (folderName != null && !folderName.trim().isEmpty()) ? folderName.trim() : "general";
-            Path uploadPath = Paths.get("uploads", subFolder).toAbsolutePath().normalize();
+            String subFolder = sanitizeFolderName(folderName);
+            Path baseUploadRoot = Paths.get("uploads").toAbsolutePath().normalize();
+            Path uploadPath = baseUploadRoot.resolve(subFolder).normalize();
+            if (!uploadPath.startsWith(baseUploadRoot)) {
+                throw new SecurityException("Đường dẫn thư mục tải lên không hợp lệ!");
+            }
             if (!Files.exists(uploadPath)) {
                 Files.createDirectories(uploadPath);
             }
@@ -161,13 +174,17 @@ public class CloudinaryServiceImpl implements CloudinaryService {
             String originalFilename = file.getOriginalFilename();
             String extension = "";
             if (originalFilename != null && originalFilename.contains(".")) {
-                extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+                String rawExt = originalFilename.substring(originalFilename.lastIndexOf(".")).replaceAll("[^a-zA-Z0-9.]", "");
+                extension = rawExt.isEmpty() ? ".png" : rawExt;
             } else {
                 extension = ".png";
             }
 
             String fileName = UUID.randomUUID() + extension;
-            Path targetLocation = uploadPath.resolve(fileName);
+            Path targetLocation = uploadPath.resolve(fileName).normalize();
+            if (!targetLocation.startsWith(uploadPath)) {
+                throw new SecurityException("Tên tệp tải lên không hợp lệ!");
+            }
             Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
 
             String fileUrl = "/uploads/" + subFolder + "/" + fileName;
@@ -184,16 +201,32 @@ public class CloudinaryServiceImpl implements CloudinaryService {
         if (publicId == null || publicId.isEmpty() || publicId.startsWith("mock_")) {
             return;
         }
+        Path baseUploadRoot = Paths.get("uploads").toAbsolutePath().normalize();
+        if (publicId.startsWith("/uploads/")) {
+            try {
+                String relative = publicId.substring("/uploads/".length());
+                Path path = baseUploadRoot.resolve(relative).normalize();
+                if (path.startsWith(baseUploadRoot)) {
+                    Files.deleteIfExists(path);
+                    logger.info("Đã xóa file cục bộ theo URL: {}", path);
+                }
+            } catch (IOException e) {
+                logger.error("Lỗi khi xóa file cục bộ theo URL: {}", e.getMessage());
+            }
+            return;
+        }
         if (publicId.startsWith("local_")) {
             try {
                 String rest = publicId.substring("local_".length());
-                int underscoreIdx = rest.indexOf('_');
+                int underscoreIdx = rest.lastIndexOf('_');
                 if (underscoreIdx > 0) {
-                    String subFolder = rest.substring(0, underscoreIdx);
+                    String subFolder = sanitizeFolderName(rest.substring(0, underscoreIdx));
                     String fileName = rest.substring(underscoreIdx + 1);
-                    Path path = Paths.get("uploads", subFolder, fileName).toAbsolutePath().normalize();
-                    Files.deleteIfExists(path);
-                    logger.info("Đã xóa file cục bộ: {}", path);
+                    Path path = baseUploadRoot.resolve(subFolder).resolve(fileName).normalize();
+                    if (path.startsWith(baseUploadRoot)) {
+                        Files.deleteIfExists(path);
+                        logger.info("Đã xóa file cục bộ: {}", path);
+                    }
                 }
             } catch (IOException e) {
                 logger.error("Lỗi khi xóa file cục bộ: {}", e.getMessage());

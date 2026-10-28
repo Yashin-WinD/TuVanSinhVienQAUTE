@@ -81,7 +81,12 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     @Transactional
     public void deleteDocument(Long id) {
-        documentRepository.deleteById(id);
+        Document doc = documentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài liệu văn bản với ID: " + id));
+        if (doc.getFileUrl() != null && doc.getFileUrl().startsWith("/uploads/")) {
+            cloudinaryService.deleteFile(doc.getFileUrl());
+        }
+        documentRepository.delete(doc);
     }
 
     @Override

@@ -7,9 +7,12 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import vn.ute.qaute.dto.request.ChatMessageDto;
 import vn.ute.qaute.entity.ChatMessage;
+import vn.ute.qaute.entity.ConsultationRequest;
 import vn.ute.qaute.entity.User;
+import vn.ute.qaute.entity.enums.RoleType;
 import vn.ute.qaute.repository.UserRepository;
 import vn.ute.qaute.service.ChatService;
+import vn.ute.qaute.service.ConsultationService;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,14 +25,17 @@ public class WebSocketChatController {
     private static final Logger logger = LoggerFactory.getLogger(WebSocketChatController.class);
 
     private final ChatService chatService;
+    private final ConsultationService consultationService;
     private final UserRepository userRepository;
     private final SimpMessagingTemplate messagingTemplate;
 
     @Autowired
     public WebSocketChatController(ChatService chatService,
+                                   ConsultationService consultationService,
                                    UserRepository userRepository,
                                    SimpMessagingTemplate messagingTemplate) {
         this.chatService = chatService;
+        this.consultationService = consultationService;
         this.userRepository = userRepository;
         this.messagingTemplate = messagingTemplate;
     }
@@ -63,8 +69,18 @@ public class WebSocketChatController {
                 }
             }
 
-            if (senderId == null || messageDto.getConsultationId() == null) {
+            if (sender == null || senderId == null || messageDto.getConsultationId() == null) {
                 logger.warn("Không thể gửi tin nhắn chat: senderId={}, consultationId={}", senderId, messageDto.getConsultationId());
+                return;
+            }
+
+            // Kiểm tra quyền tham gia phòng chat của người gửi
+            ConsultationRequest consultation = consultationService.getRequestById(messageDto.getConsultationId());
+            boolean isOwnerStudent = consultation.getStudent() != null && consultation.getStudent().getId().equals(senderId);
+            boolean isStaff = sender.getRole() == RoleType.ROLE_LECTURER || sender.getRole() == RoleType.ROLE_ADMIN;
+            if (!isOwnerStudent && !isStaff) {
+                logger.warn("Người dùng {} (id={}) không có quyền gửi tin nhắn vào phiếu tư vấn #{}",
+                        sender.getUsername(), senderId, messageDto.getConsultationId());
                 return;
             }
 

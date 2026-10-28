@@ -73,7 +73,8 @@ public class AdminController {
                             @RequestParam(value = "isActive", required = false) Boolean isActive,
                             @RequestParam(value = "keyword", required = false) String keyword,
                             Model model) {
-        model.addAttribute("students", userService.filterUsers(RoleType.ROLE_STUDENT, departmentId, isActive, keyword));
+        // Sinh viên không thuộc Khoa/Phòng ban quản trị, nên không lọc sinh viên theo departmentId
+        model.addAttribute("students", userService.filterUsers(RoleType.ROLE_STUDENT, null, isActive, keyword));
         model.addAttribute("lecturers", userService.filterUsers(RoleType.ROLE_LECTURER, departmentId, isActive, keyword));
         model.addAttribute("departments", departmentService.getAllDepartments());
         model.addAttribute("selectedDepartmentId", departmentId);
@@ -85,6 +86,11 @@ public class AdminController {
     @PostMapping("/users/{id}/toggle-status")
     public String toggleUserStatus(@PathVariable("id") Long id, RedirectAttributes redirectAttributes) {
         try {
+            User currentUser = userService.getCurrentUser();
+            if (currentUser != null && currentUser.getId().equals(id)) {
+                redirectAttributes.addFlashAttribute("errorMessage", "Bạn không thể tự khóa tài khoản của chính mình!");
+                return "redirect:/admin/users";
+            }
             User user = userService.getUserById(id);
             userService.updateUserStatus(id, !Boolean.TRUE.equals(user.getIsActive()));
             redirectAttributes.addFlashAttribute("successMessage", "Cập nhật trạng thái tài khoản " + user.getUsername() + " thành công!");

@@ -117,6 +117,9 @@ public class ConsultationServiceImpl implements ConsultationService {
     @Transactional
     public void assignLecturer(Long requestId, Long lecturerId) {
         ConsultationRequest request = getRequestById(requestId);
+        if (request.getStatus() == RequestStatus.RESOLVED || request.getStatus() == RequestStatus.CLOSED) {
+            throw new BadRequestException("Không thể phân công lại phiếu tư vấn đã giải quyết hoặc đã đóng!");
+        }
         User lecturer = userRepository.findById(lecturerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy giảng viên với ID: " + lecturerId));
 
@@ -273,7 +276,13 @@ public class ConsultationServiceImpl implements ConsultationService {
     public void toggleRequestStatus(Long requestId) {
         ConsultationRequest request = getRequestById(requestId);
         if (request.getStatus() == RequestStatus.CLOSED) {
-            request.setStatus(request.getAnswerContent() != null ? RequestStatus.RESOLVED : RequestStatus.ASSIGNED);
+            if (request.getAnswerContent() != null && !request.getAnswerContent().trim().isEmpty()) {
+                request.setStatus(RequestStatus.RESOLVED);
+            } else if (request.getLecturer() != null) {
+                request.setStatus(RequestStatus.ASSIGNED);
+            } else {
+                request.setStatus(RequestStatus.PENDING);
+            }
         } else {
             request.setStatus(RequestStatus.CLOSED);
         }

@@ -77,6 +77,9 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void changePassword(Long userId, String oldPassword, String newPassword) {
+        if (newPassword == null || newPassword.length() < 6) {
+            throw new BadRequestException("Mật khẩu mới phải có ít nhất 6 ký tự");
+        }
         User user = getUserById(userId);
         if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
             throw new BadRequestException("Mật khẩu hiện tại không chính xác");

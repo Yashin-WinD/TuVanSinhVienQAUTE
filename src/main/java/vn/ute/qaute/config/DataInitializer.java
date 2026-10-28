@@ -73,7 +73,7 @@ public class DataInitializer implements CommandLineRunner {
             ));
         }
 
-        // 4. Tạo tài khoản mẫu
+        // 4. Tạo tài khoản mẫu (Mật khẩu mặc định đồng nhất: 123456)
         if (!userRepository.existsByUsername("admin")) {
             logger.info("Khởi tạo tài khoản mẫu Admin, Giảng viên, Sinh viên...");
             Department fitDept = departmentRepository.findByCode("FIT").orElse(null);
@@ -81,7 +81,7 @@ public class DataInitializer implements CommandLineRunner {
 
             User admin = new User(
                     "admin",
-                    passwordEncoder.encode("admin123"),
+                    passwordEncoder.encode("123456"),
                     "Quản trị viên QAUTE",
                     "admin@hcmute.edu.vn",
                     "0901234567",
@@ -94,7 +94,7 @@ public class DataInitializer implements CommandLineRunner {
 
             User gv = new User(
                     "giangvien",
-                    passwordEncoder.encode("gv123456"),
+                    passwordEncoder.encode("123456"),
                     "TS. Nguyễn Văn Giảng Viên",
                     "gv_fit@hcmute.edu.vn",
                     "0912345678",
@@ -107,7 +107,7 @@ public class DataInitializer implements CommandLineRunner {
 
             User gvCtsv = new User(
                     "giangvien_ctsv",
-                    passwordEncoder.encode("gv123456"),
+                    passwordEncoder.encode("123456"),
                     "ThS. Trần Thị Cố Vấn",
                     "gv_ctsv@hcmute.edu.vn",
                     "0923456789",
@@ -120,7 +120,7 @@ public class DataInitializer implements CommandLineRunner {
 
             User sv = new User(
                     "sinhvien",
-                    passwordEncoder.encode("sv123456"),
+                    passwordEncoder.encode("123456"),
                     "Lê Văn Sinh Viên",
                     "21110001@student.hcmute.edu.vn",
                     "0934567890",
@@ -152,9 +152,9 @@ public class DataInitializer implements CommandLineRunner {
                 documentRepository.save(new Document(
                         "Quy chế đào tạo học chế tín chỉ trình độ đại học",
                         "Toàn văn quy chế đào tạo, đăng ký môn học, rút môn, xét điều kiện tốt nghiệp tại Trường ĐH Sư phạm Kỹ thuật TP.HCM.",
-                        "https://example.com/docs/Quy_che_dao_tao_tin_chi.pdf",
+                        "/uploads/documents/570ea0bd-f278-48e9-9331-27a3d723c1c4.pdf",
                         "Quy_che_dao_tao_tin_chi.pdf",
-                        "application/pdf",
+                        "PDF",
                         2456000L,
                         DocumentCategory.TRAINING_REGULATION,
                         admin
@@ -162,9 +162,9 @@ public class DataInitializer implements CommandLineRunner {
                 documentRepository.save(new Document(
                         "Mẫu đơn xin hoãn thi / kiểm tra kết thúc học phần",
                         "Dành cho sinh viên gặp lý do bất khả kháng (ốm đau, tai nạn, việc gia đình cấp thiết) kèm minh chứng hợp lệ.",
-                        "https://example.com/docs/Mau_don_xin_hoan_thi.pdf",
+                        "/uploads/documents/7db2ee23-dd0c-46a4-8a70-b037dab27e8e.pdf",
                         "Mau_don_xin_hoan_thi.pdf",
-                        "application/pdf",
+                        "PDF",
                         315000L,
                         DocumentCategory.STUDENT_FORM,
                         admin
@@ -172,9 +172,9 @@ public class DataInitializer implements CommandLineRunner {
                 documentRepository.save(new Document(
                         "Quy định xét cấp Học bổng khuyến khích học tập",
                         "Hướng dẫn chi tiết tiêu chuẩn xét học bổng khuyến khích học tập học kỳ chính và học bổng doanh nghiệp.",
-                        "https://example.com/docs/Quy_dinh_hoc_bong_KKHT.pdf",
+                        "/uploads/documents/edb09dec-ee20-4337-a9d9-93dc866e8698.pdf",
                         "Quy_dinh_hoc_bong_KKHT.pdf",
-                        "application/pdf",
+                        "PDF",
                         1120000L,
                         DocumentCategory.SCHOLARSHIP,
                         admin
@@ -182,9 +182,9 @@ public class DataInitializer implements CommandLineRunner {
                 documentRepository.save(new Document(
                         "Mẫu phiếu đánh giá điểm rèn luyện sinh viên",
                         "Biểu mẫu tự đánh giá và thang điểm chi tiết cho các hoạt động ngoại khóa, đoàn hội và phong trào sinh viên.",
-                        "https://example.com/docs/Mau_danh_gia_diem_ren_luyen.pdf",
+                        "/uploads/documents/570ea0bd-f278-48e9-9331-27a3d723c1c4.pdf",
                         "Mau_danh_gia_diem_ren_luyen.pdf",
-                        "application/pdf",
+                        "PDF",
                         542000L,
                         DocumentCategory.TRAINING_POINT,
                         admin

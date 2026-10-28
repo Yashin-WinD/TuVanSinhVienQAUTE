@@ -35,7 +35,7 @@ public class OtpServiceImpl implements OtpService {
         LocalDateTime expiryTime = LocalDateTime.now().plusMinutes(OTP_EXPIRY_MINUTES);
 
         // Tạo và lưu entity OtpToken
-        OtpToken otpToken = new OtpToken(email, otp, expiryTime);
+        OtpToken otpToken = new OtpToken(email, otp, purpose, expiryTime);
         otpTokenRepository.save(otpToken);
 
         // Gửi qua MailService (vừa in Console vừa gửi Mail nếu cấu hình)

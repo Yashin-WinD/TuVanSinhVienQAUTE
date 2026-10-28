@@ -28,6 +28,12 @@ public class ChatMessage {
     @Column(name = "media_url", length = 500)
     private String mediaUrl;
 
+    @Column(name = "file_name", length = 255)
+    private String fileName;
+
+    @Column(name = "file_size")
+    private Long fileSize;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "message_type", nullable = false, length = 50)
     private MessageType messageType = MessageType.TEXT;
@@ -94,6 +100,22 @@ public class ChatMessage {
 
     public void setMediaUrl(String mediaUrl) {
         this.mediaUrl = mediaUrl;
+    }
+
+    public String getFileName() {
+        return fileName;
+    }
+
+    public void setFileName(String fileName) {
+        this.fileName = fileName;
+    }
+
+    public Long getFileSize() {
+        return fileSize;
+    }
+
+    public void setFileSize(Long fileSize) {
+        this.fileSize = fileSize;
     }
 
     public MessageType getMessageType() {
