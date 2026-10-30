@@ -38,11 +38,16 @@
                             <h4 class="fw-bold text-dark mb-3" th:text="${request.title}">Tiêu đề</h4>
                             <p class="text-secondary" style="white-space: pre-line;" th:text="${request.content}">Nội dung chi tiết</p>
 
-                            <!-- Ảnh minh chứng nếu có -->
+                            <!-- Ảnh / Tài liệu minh chứng nếu có -->
                             <div th:if="${request.attachmentUrls != null and !#strings.isEmpty(request.attachmentUrls)}" class="mt-3 p-3 bg-light rounded border">
-                                <h6 class="fw-semibold text-dark mb-2"><i class="bi bi-paperclip me-1"></i>Tệp / Minh chứng đính kèm (Cloudinary):</h6>
+                                <h6 class="fw-semibold text-dark mb-2"><i class="bi bi-paperclip me-1"></i>Tệp / Minh chứng đính kèm:</h6>
+                                <div th:if="${#strings.endsWith(#strings.toLowerCase(request.attachmentUrls), '.png') or #strings.endsWith(#strings.toLowerCase(request.attachmentUrls), '.jpg') or #strings.endsWith(#strings.toLowerCase(request.attachmentUrls), '.jpeg') or #strings.endsWith(#strings.toLowerCase(request.attachmentUrls), '.webp') or #strings.endsWith(#strings.toLowerCase(request.attachmentUrls), '.gif')}" class="mb-2">
+                                    <a th:href="${request.attachmentUrls}" target="_blank">
+                                        <img th:src="${request.attachmentUrls}" alt="Minh chứng" class="img-fluid rounded border shadow-sm" style="max-height: 320px; object-fit: contain;">
+                                    </a>
+                                </div>
                                 <a th:href="${request.attachmentUrls}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-file-earmark-image me-1"></i>Xem tệp đính kèm
+                                    <i class="bi bi-box-arrow-up-right me-1"></i>Xem / Tải tệp đính kèm
                                 </a>
                             </div>
 
@@ -59,9 +64,15 @@
                             </h5>
                             <p class="text-secondary" style="white-space: pre-line;" th:text="${request.answerContent}">Nội dung trả lời</p>
 
-                            <div th:if="${request.answerFiles != null}" class="mt-2">
-                                <a th:href="${request.answerFiles}" target="_blank" class="btn btn-sm btn-outline-success">
-                                    <i class="bi bi-download me-1"></i>Tải tài liệu hướng dẫn kèm theo
+                            <div th:if="${request.answerFiles != null and !#strings.isEmpty(request.answerFiles)}" class="mt-3 p-3 bg-success-subtle rounded border border-success-subtle">
+                                <h6 class="fw-semibold text-success small mb-2"><i class="bi bi-paperclip me-1"></i>Tài liệu hướng dẫn đính kèm từ Giảng viên:</h6>
+                                <div th:if="${#strings.endsWith(#strings.toLowerCase(request.answerFiles), '.png') or #strings.endsWith(#strings.toLowerCase(request.answerFiles), '.jpg') or #strings.endsWith(#strings.toLowerCase(request.answerFiles), '.jpeg') or #strings.endsWith(#strings.toLowerCase(request.answerFiles), '.webp') or #strings.endsWith(#strings.toLowerCase(request.answerFiles), '.gif')}" class="mb-2">
+                                    <a th:href="${request.answerFiles}" target="_blank">
+                                        <img th:src="${request.answerFiles}" alt="Tài liệu hướng dẫn" class="img-fluid rounded border shadow-sm" style="max-height: 280px; object-fit: contain;">
+                                    </a>
+                                </div>
+                                <a th:href="${request.answerFiles}" target="_blank" class="btn btn-sm btn-success">
+                                    <i class="bi bi-download me-1"></i>Xem / Tải tài liệu hướng dẫn kèm theo
                                 </a>
                             </div>
 

@@ -71,11 +71,24 @@
                                 Nội dung câu hỏi
                             </div>
 
-                            <div th:if="${request.attachmentUrls != null and !#strings.isEmpty(request.attachmentUrls)}" class="mb-3">
-                                <span class="fw-semibold small d-block mb-1"><i class="bi bi-paperclip me-1"></i>Minh chứng sinh viên gửi:</span>
-                                <a th:href="${request.attachmentUrls}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-file-earmark-image me-1"></i>Xem ảnh / tài liệu đính kèm
-                                </a>
+                            <div th:if="${request.attachmentUrls != null and !#strings.isEmpty(request.attachmentUrls)}" class="mb-3 p-3 bg-light rounded border">
+                                <span class="fw-semibold small d-block mb-2"><i class="bi bi-paperclip me-1"></i>Minh chứng sinh viên gửi:</span>
+                                <div th:if="${#strings.endsWith(#strings.toLowerCase(request.attachmentUrls), '.png') or #strings.endsWith(#strings.toLowerCase(request.attachmentUrls), '.jpg') or #strings.endsWith(#strings.toLowerCase(request.attachmentUrls), '.jpeg') or #strings.endsWith(#strings.toLowerCase(request.attachmentUrls), '.webp') or #strings.endsWith(#strings.toLowerCase(request.attachmentUrls), '.gif')}" class="mb-2">
+                                    <a th:href="${request.attachmentUrls}" target="_blank">
+                                        <img th:src="${request.attachmentUrls}" alt="Minh chứng" class="img-fluid rounded border shadow-sm" style="max-height: 240px; object-fit: contain;">
+                                    </a>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button th:if="${#strings.endsWith(#strings.toLowerCase(request.attachmentUrls), '.pdf')}" type="button"
+                                            class="btn btn-sm btn-outline-info"
+                                            th:data-url="${request.attachmentUrls}"
+                                            onclick="openAttachmentModal(this.getAttribute('data-url'), 'Minh chứng đính kèm của sinh viên')">
+                                        <i class="bi bi-eye me-1"></i>Xem trước PDF
+                                    </button>
+                                    <a th:href="${request.attachmentUrls}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-box-arrow-up-right me-1"></i>Mở / Tải tệp đính kèm
+                                    </a>
+                                </div>
                             </div>
 
                             <!-- Forward info if applicable -->
@@ -105,6 +118,7 @@
                             </h5>
 
                             <form th:action="@{/lecturer/requests/{id}/answer(id=${request.id})}" th:object="${answerDto}" method="post" enctype="multipart/form-data">
+                                <input type="hidden" th:field="*{answerFiles}">
                                 <div class="mb-3">
                                     <label class="form-label fw-semibold">Nội dung tư vấn / hướng dẫn xử lý <span class="text-danger">*</span></label>
                                     <textarea class="form-control" th:field="*{answerContent}" rows="9" 
@@ -113,8 +127,31 @@
 
                                 <div class="mb-4">
                                     <label class="form-label fw-semibold">Tài liệu / Biểu mẫu hướng dẫn kèm theo (tùy chọn)</label>
-                                    <input type="file" name="answerFile" class="form-control" accept=".pdf,.doc,.docx,.png,.jpg">
-                                    <div class="form-text">Đính kèm biểu mẫu đơn từ, văn bản quy định của trường (nếu có).</div>
+                                    <input type="file" name="answerFile" class="form-control" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx">
+                                    <div class="form-text">Đính kèm biểu mẫu đơn từ, văn bản quy định của trường (Hỗ trợ PDF, Word, Excel, Ảnh - Tối đa 200MB, tải lên tức thì & đồng bộ Cloudinary).</div>
+
+                                    <!-- Hiển thị tệp đính kèm hiện tại của Giảng viên (nếu đã tải lên trước đó) -->
+                                    <div th:if="${request.answerFiles != null and !#strings.isEmpty(request.answerFiles)}" class="mt-3 p-3 bg-success-subtle rounded border border-success-subtle">
+                                        <div class="fw-semibold text-success small mb-2">
+                                            <i class="bi bi-check-circle-fill me-1"></i>Tài liệu hướng dẫn đã đính kèm:
+                                        </div>
+                                        <div th:if="${#strings.endsWith(#strings.toLowerCase(request.answerFiles), '.png') or #strings.endsWith(#strings.toLowerCase(request.answerFiles), '.jpg') or #strings.endsWith(#strings.toLowerCase(request.answerFiles), '.jpeg') or #strings.endsWith(#strings.toLowerCase(request.answerFiles), '.webp') or #strings.endsWith(#strings.toLowerCase(request.answerFiles), '.gif')}" class="mb-2">
+                                            <a th:href="${request.answerFiles}" target="_blank">
+                                                <img th:src="${request.answerFiles}" alt="Tài liệu đính kèm" class="img-fluid rounded border shadow-sm" style="max-height: 200px; object-fit: contain;">
+                                            </a>
+                                        </div>
+                                        <div class="d-flex flex-wrap gap-2">
+                                            <button th:if="${#strings.endsWith(#strings.toLowerCase(request.answerFiles), '.pdf')}" type="button"
+                                                    class="btn btn-sm btn-outline-success bg-white"
+                                                    th:data-url="${request.answerFiles}"
+                                                    onclick="openAttachmentModal(this.getAttribute('data-url'), 'Tài liệu hướng dẫn từ Giảng viên')">
+                                                <i class="bi bi-eye me-1"></i>Xem trước PDF
+                                            </button>
+                                            <a th:href="${request.answerFiles}" target="_blank" class="btn btn-sm btn-success">
+                                                <i class="bi bi-download me-1"></i>Xem / Tải tài liệu đã đính kèm
+                                            </a>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div class="d-flex justify-content-end gap-2">
@@ -125,6 +162,29 @@
                             </form>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Xem trước PDF đính kèm -->
+    <div class="modal fade" id="attachmentPreviewModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content shadow-lg border-0" style="height: 88vh;">
+                <div class="modal-header py-2 bg-dark text-white d-flex justify-content-between align-items-center">
+                    <h6 class="modal-title text-truncate mb-0 me-3">
+                        <i class="bi bi-file-earmark-pdf-fill me-2 text-danger"></i>
+                        <span id="attachmentPreviewTitle">Xem trước tài liệu</span>
+                    </h6>
+                    <div class="d-flex align-items-center gap-2">
+                        <a id="attachmentOpenNewTabBtn" href="#" target="_blank" class="btn btn-sm btn-outline-light">
+                            <i class="bi bi-box-arrow-up-right me-1"></i>Mở rộng
+                        </a>
+                        <button type="button" class="btn-close btn-close-white ms-1" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                </div>
+                <div class="modal-body p-0 d-flex flex-column flex-grow-1 bg-secondary bg-opacity-10" style="overflow: hidden;">
+                    <iframe id="attachmentPreviewFrame" src="" class="w-100 flex-grow-1" style="border: none;"></iframe>
                 </div>
             </div>
         </div>
@@ -178,5 +238,20 @@
 
     <div th:replace="~{fragments/footer :: footer}"></div>
     <div th:replace="~{fragments/scripts :: scripts}"></div>
+
+    <script>
+        const attModalEl = document.getElementById('attachmentPreviewModal');
+        function openAttachmentModal(url, title) {
+            document.getElementById('attachmentPreviewTitle').textContent = title || 'Xem trước tài liệu';
+            document.getElementById('attachmentPreviewFrame').src = url;
+            document.getElementById('attachmentOpenNewTabBtn').href = url;
+            bootstrap.Modal.getOrCreateInstance(attModalEl).show();
+        }
+        if (attModalEl) {
+            attModalEl.addEventListener('hidden.bs.modal', function () {
+                document.getElementById('attachmentPreviewFrame').src = '';
+            });
+        }
+    </script>
 </body>
 </html>
