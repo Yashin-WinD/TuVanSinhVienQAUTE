@@ -12,6 +12,7 @@ import vn.ute.qaute.dto.response.CloudinaryResponseDto;
 import vn.ute.qaute.service.CloudinaryService;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -26,6 +27,9 @@ public class CloudinaryServiceImpl implements CloudinaryService {
     private static final Logger logger = LoggerFactory.getLogger(CloudinaryServiceImpl.class);
 
     private final Cloudinary cloudinary;
+
+    @Value("${cloudinary.enabled:false}")
+    private boolean cloudinaryEnabled;
 
     @Value("${cloudinary.upload-preset:test1file}")
     private String uploadPreset;
@@ -63,12 +67,15 @@ public class CloudinaryServiceImpl implements CloudinaryService {
 
         String safeFolder = sanitizeFolderName(folderName);
 
-        // Nếu thông tin Cloudinary là mẫu hoặc chưa cấu hình hợp lệ, lưu trực tiếp vào server cục bộ
-        if (cloudName == null || cloudName.trim().isEmpty() 
-                || cloudName.equalsIgnoreCase("test1") 
+        // Lưu trực tiếp vào ổ cứng cục bộ đối với kho tài liệu (documents) để tốc độ tải lên tức thì
+        // và đảm bảo xem trước PDF trực tiếp trong trình duyệt không bị Cloudinary chặn.
+        if (!cloudinaryEnabled
+                || "documents".equalsIgnoreCase(safeFolder)
+                || cloudName == null
+                || cloudName.trim().isEmpty()
+                || cloudName.equalsIgnoreCase("test1")
                 || cloudName.equalsIgnoreCase("test-cloud")
                 || cloudName.startsWith("test")) {
-            logger.info("Đang ở chế độ lưu trữ tệp cục bộ (Cloudinary: {}). Thư mục: /uploads/{}/", cloudName, safeFolder);
             return saveLocally(file, safeFolder);
         }
 
@@ -83,84 +90,45 @@ public class CloudinaryServiceImpl implements CloudinaryService {
             params.put("filename_override", originalFilename);
         }
 
-        Map<?, ?> uploadResult = null;
-        Exception lastException = null;
         Path tempFile = null;
-
         try {
-            // Tạo tệp tạm thời để upload (hỗ trợ uploadLarge cho cả file lớn > 10MB)
-            String prefix = "cld_upload_";
-            String suffix = (originalFilename != null && originalFilename.contains(".")) 
-                    ? originalFilename.substring(originalFilename.lastIndexOf(".")) 
+            String suffix = (originalFilename != null && originalFilename.contains("."))
+                    ? originalFilename.substring(originalFilename.lastIndexOf("."))
                     : ".tmp";
-            tempFile = Files.createTempFile(prefix, suffix);
-            Files.copy(file.getInputStream(), tempFile, StandardCopyOption.REPLACE_EXISTING);
+            tempFile = Files.createTempFile("cld_upload_", suffix);
+            file.transferTo(tempFile);
 
-            // 1. Thử Signed Upload chuẩn (Dùng API Key & API Secret, KHÔNG nhét unsigned upload_preset vào)
-            try {
-                logger.info("Đang tải tệp '{}' lên Cloudinary (Signed uploadLarge, resource_type: {})...", originalFilename, params.get("resource_type"));
-                uploadResult = cloudinary.uploader().uploadLarge(tempFile.toFile(), params);
-            } catch (Exception e1) {
-                lastException = e1;
-                logger.warn("Signed Upload thất bại ({}), đang thử Signed Upload thông thường...", e1.getMessage());
+            Map<?, ?> uploadResult = cloudinary.uploader().uploadLarge(tempFile.toFile(), params);
+            if (uploadResult != null) {
+                String publicId = (String) uploadResult.get("public_id");
+                String secureUrl = (String) uploadResult.get("secure_url");
+                String format = (String) uploadResult.get("format");
+                Long bytes = uploadResult.get("bytes") != null
+                        ? ((Number) uploadResult.get("bytes")).longValue()
+                        : file.getSize();
+                String resourceType = (String) uploadResult.get("resource_type");
 
-                try {
-                    uploadResult = cloudinary.uploader().upload(tempFile.toFile(), params);
-                    lastException = null;
-                } catch (Exception e2) {
-                    lastException = e2;
-                    logger.warn("Signed Upload thông thường thất bại ({}), đang thử Unsigned Upload...", e2.getMessage());
-
-                    // 2. Nếu Signed thất bại và có upload_preset, thử Unsigned Upload
-                    if (uploadPreset != null && !uploadPreset.trim().isEmpty()) {
-                        try {
-                            Map<String, Object> unsignedParams = new HashMap<>();
-                            unsignedParams.put("resource_type", defaultResourceType != null ? defaultResourceType : "auto");
-                            uploadResult = cloudinary.uploader().unsignedUpload(tempFile.toFile(), uploadPreset.trim(), unsignedParams);
-                            lastException = null;
-                        } catch (Exception e3) {
-                            lastException = e3;
-                            logger.warn("Unsigned Upload thất bại: {}", e3.getMessage());
-                        }
-                    }
-                }
+                logger.info(">>> TẢI FILE LÊN CLOUDINARY THÀNH CÔNG: {}", secureUrl);
+                return new CloudinaryResponseDto(publicId, secureUrl, format, bytes, resourceType);
             }
         } catch (Exception ex) {
-            lastException = ex;
-            logger.error("Lỗi chuẩn bị tệp upload: {}", ex.getMessage());
+            logger.warn("Không thể tải lên Cloudinary ({}), tự động chuyển sang lưu cục bộ /uploads/{}/",
+                    ex.getMessage(), safeFolder);
         } finally {
-            // Xóa file tạm thời sau khi xử lý xong
             if (tempFile != null) {
                 try {
                     Files.deleteIfExists(tempFile);
-                } catch (IOException ignored) {}
+                } catch (IOException ignored) {
+                }
             }
         }
 
-        if (uploadResult != null) {
-            String publicId = (String) uploadResult.get("public_id");
-            String secureUrl = (String) uploadResult.get("secure_url");
-            String format = (String) uploadResult.get("format");
-            Long bytes = uploadResult.get("bytes") != null ? ((Number) uploadResult.get("bytes")).longValue() : file.getSize();
-            String resourceType = (String) uploadResult.get("resource_type");
-
-            logger.info(">>> TẢI FILE LÊN CLOUDINARY THÀNH CÔNG: {}", secureUrl);
-            return new CloudinaryResponseDto(publicId, secureUrl, format, bytes, resourceType);
-        } else {
-            String errorMsg = lastException != null ? lastException.getMessage() : "Unknown Cloudinary error";
-            logger.warn("====================================================================");
-            logger.warn("KHÔNG THỂ TẢI LÊN CLOUDINARY: {}", errorMsg);
-            if (lastException != null) {
-                logger.warn("Chi tiết lỗi Cloudinary:", lastException);
-            }
-            logger.warn("-> Hệ thống tự động chuyển sang lưu trữ cục bộ: /uploads/{}/", safeFolder);
-            logger.warn("====================================================================");
-            return saveLocally(file, safeFolder);
-        }
+        return saveLocally(file, safeFolder);
     }
 
     private CloudinaryResponseDto saveLocally(MultipartFile file, String folderName) {
         try {
+            long startTime = System.currentTimeMillis();
             String subFolder = sanitizeFolderName(folderName);
             Path baseUploadRoot = Paths.get("uploads").toAbsolutePath().normalize();
             Path uploadPath = baseUploadRoot.resolve(subFolder).normalize();
@@ -174,8 +142,9 @@ public class CloudinaryServiceImpl implements CloudinaryService {
             String originalFilename = file.getOriginalFilename();
             String extension = "";
             if (originalFilename != null && originalFilename.contains(".")) {
-                String rawExt = originalFilename.substring(originalFilename.lastIndexOf(".")).replaceAll("[^a-zA-Z0-9.]", "");
-                extension = rawExt.isEmpty() ? ".png" : rawExt;
+                String rawExt = originalFilename.substring(originalFilename.lastIndexOf("."))
+                        .replaceAll("[^a-zA-Z0-9.]", "");
+                extension = rawExt.isEmpty() ? ".bin" : rawExt.toLowerCase();
             } else {
                 extension = ".png";
             }
@@ -185,14 +154,31 @@ public class CloudinaryServiceImpl implements CloudinaryService {
             if (!targetLocation.startsWith(uploadPath)) {
                 throw new SecurityException("Tên tệp tải lên không hợp lệ!");
             }
-            Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
+
+            // Sử dụng transferTo trực tiếp để đạt tốc độ ghi đĩa nhanh nhất cho file dung lượng lớn
+            try {
+                file.transferTo(targetLocation);
+            } catch (Exception transferEx) {
+                try (InputStream in = file.getInputStream()) {
+                    Files.copy(in, targetLocation, StandardCopyOption.REPLACE_EXISTING);
+                }
+            }
 
             String fileUrl = "/uploads/" + subFolder + "/" + fileName;
-            logger.info("Đã lưu tệp tải lên cục bộ tại: {}", fileUrl);
-            return new CloudinaryResponseDto("local_" + subFolder + "_" + fileName, fileUrl, extension.replace(".", ""), file.getSize(), "image");
+            String extNoDot = extension.replace(".", "");
+            String resourceType = (extNoDot.matches("(?i)jpg|jpeg|png|gif|webp|bmp|svg")) ? "image" : "raw";
+            long elapsed = System.currentTimeMillis() - startTime;
+            logger.info("Đã lưu tệp tải lên cục bộ tại: {} ({} bytes trong {} ms)", fileUrl, file.getSize(), elapsed);
+            return new CloudinaryResponseDto(
+                    "local_" + subFolder + "_" + fileName,
+                    fileUrl,
+                    extNoDot,
+                    file.getSize(),
+                    resourceType
+            );
         } catch (IOException ex) {
             logger.error("Lỗi khi lưu trữ file cục bộ: {}", ex.getMessage(), ex);
-            throw new RuntimeException("Không thể lưu trữ tệp ảnh tải lên: " + ex.getMessage(), ex);
+            throw new RuntimeException("Không thể lưu trữ tệp tải lên: " + ex.getMessage(), ex);
         }
     }
 

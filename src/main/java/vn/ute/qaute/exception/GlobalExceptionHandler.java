@@ -52,7 +52,7 @@ public class GlobalExceptionHandler {
     public Object handleMaxUploadSizeExceeded(org.springframework.web.multipart.MaxUploadSizeExceededException ex,
                                              HttpServletRequest request,
                                              Model model) {
-        String errorMsg = "Kích thước tệp tin tải lên vượt quá giới hạn cho phép (tối đa 25MB)!";
+        String errorMsg = "Kích thước tệp tin tải lên vượt quá giới hạn cho phép (tối đa 200MB)!";
         if (isApiRequest(request)) {
             return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
                     .body(ApiResponse.error(errorMsg));
