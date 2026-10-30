@@ -26,9 +26,12 @@ public class CloudinaryServiceImpl implements CloudinaryService {
 
     private static final Logger logger = LoggerFactory.getLogger(CloudinaryServiceImpl.class);
 
+    // Giới hạn tối đa của gói Cloudinary Free là 10MB (10,485,760 bytes)
+    private static final long CLOUDINARY_FREE_MAX_BYTES = 10_485_760L;
+
     private final Cloudinary cloudinary;
 
-    @Value("${cloudinary.enabled:false}")
+    @Value("${cloudinary.enabled:true}")
     private boolean cloudinaryEnabled;
 
     @Value("${cloudinary.upload-preset:test1file}")
@@ -60,46 +63,58 @@ public class CloudinaryServiceImpl implements CloudinaryService {
         return cleaned.isEmpty() ? "general" : cleaned;
     }
 
+    private String extractExtension(String originalFilename) {
+        if (originalFilename != null && originalFilename.contains(".")) {
+            String rawExt = originalFilename.substring(originalFilename.lastIndexOf("."))
+                    .replaceAll("[^a-zA-Z0-9.]", "");
+            return rawExt.isEmpty() ? ".bin" : rawExt.toLowerCase();
+        }
+        return ".png";
+    }
+
     private CloudinaryResponseDto uploadInternal(MultipartFile file, String folderName, String defaultResourceType) {
         if (file == null || file.isEmpty()) {
             return null;
         }
 
         String safeFolder = sanitizeFolderName(folderName);
+        String extension = extractExtension(file.getOriginalFilename());
 
-        // Lưu trực tiếp vào ổ cứng cục bộ đối với kho tài liệu (documents) để tốc độ tải lên tức thì
-        // và đảm bảo xem trước PDF trực tiếp trong trình duyệt không bị Cloudinary chặn.
-        if (!cloudinaryEnabled
-                || "documents".equalsIgnoreCase(safeFolder)
-                || cloudName == null
-                || cloudName.trim().isEmpty()
-                || cloudName.equalsIgnoreCase("test1")
-                || cloudName.equalsIgnoreCase("test-cloud")
-                || cloudName.startsWith("test")) {
-            return saveLocally(file, safeFolder);
+        // 1. Luôn lưu trước một bản локаl vào /uploads/{safeFolder}/ để đảm bảo tốc độ và phục vụ Xem trước (Preview)
+        Path localMirrorPath = saveLocalFile(file, safeFolder, UUID.randomUUID() + extension);
+
+        // 2. Kiểm tra điều kiện đẩy lên Cloudinary
+        boolean isConfigured = cloudinaryEnabled
+                && cloudName != null
+                && !cloudName.trim().isEmpty()
+                && !cloudName.equalsIgnoreCase("test1")
+                && !cloudName.equalsIgnoreCase("test-cloud")
+                && !cloudName.startsWith("test");
+
+        if (!isConfigured) {
+            return buildLocalResponse(localMirrorPath, safeFolder, extension, file.getSize());
         }
 
-        String originalFilename = file.getOriginalFilename();
+        // Gói Cloudinary Free giới hạn cứng 10MB (10,485,760 bytes) cho mỗi file.
+        // Nếu file > 10MB, bỏ qua gọi mạng Cloudinary để không phải chờ upload rồi bị báo lỗi 400.
+        if (file.getSize() > CLOUDINARY_FREE_MAX_BYTES) {
+            logger.warn("Tệp '{}' ({} bytes) vượt quá giới hạn 10MB của gói Cloudinary Free (tối đa 10,485,760 bytes). " +
+                    "Sử dụng trực tiếp bản lưu cục bộ tốc độ cao tại /uploads/{}/{}",
+                    file.getOriginalFilename(), file.getSize(), safeFolder, localMirrorPath.getFileName());
+            return buildLocalResponse(localMirrorPath, safeFolder, extension, file.getSize());
+        }
 
+        // 3. Đẩy trực tiếp file đã lưu từ ổ cứng lên Cloudinary (1 lần gọi duy nhất, không dùng filename_override gây lỗi ký tự tiếng Việt)
         Map<String, Object> params = new HashMap<>();
         params.put("resource_type", defaultResourceType != null ? defaultResourceType : "auto");
         params.put("folder", "qaute/" + safeFolder);
-        params.put("use_filename", true);
-        params.put("unique_filename", true);
-        if (originalFilename != null) {
-            params.put("filename_override", originalFilename);
-        }
 
-        Path tempFile = null;
         try {
-            String suffix = (originalFilename != null && originalFilename.contains("."))
-                    ? originalFilename.substring(originalFilename.lastIndexOf("."))
-                    : ".tmp";
-            tempFile = Files.createTempFile("cld_upload_", suffix);
-            file.transferTo(tempFile);
+            logger.info("Đang tải tệp '{}' ({} bytes) lên Cloudinary (folder: qaute/{})...",
+                    file.getOriginalFilename(), file.getSize(), safeFolder);
+            Map<?, ?> uploadResult = cloudinary.uploader().upload(localMirrorPath.toFile(), params);
 
-            Map<?, ?> uploadResult = cloudinary.uploader().uploadLarge(tempFile.toFile(), params);
-            if (uploadResult != null) {
+            if (uploadResult != null && uploadResult.get("secure_url") != null) {
                 String publicId = (String) uploadResult.get("public_id");
                 String secureUrl = (String) uploadResult.get("secure_url");
                 String format = (String) uploadResult.get("format");
@@ -108,28 +123,23 @@ public class CloudinaryServiceImpl implements CloudinaryService {
                         : file.getSize();
                 String resourceType = (String) uploadResult.get("resource_type");
 
+                // Đổi tên bản lưu cục bộ khớp với tên file trên URL Cloudinary để trình Xem trước (Preview)
+                // có thể đọc từ ổ cứng ngay lập tức mà không bị lỗi 401 PDF của Cloudinary Free
+                syncLocalMirrorFileName(localMirrorPath, secureUrl);
+
                 logger.info(">>> TẢI FILE LÊN CLOUDINARY THÀNH CÔNG: {}", secureUrl);
                 return new CloudinaryResponseDto(publicId, secureUrl, format, bytes, resourceType);
             }
         } catch (Exception ex) {
-            logger.warn("Không thể tải lên Cloudinary ({}), tự động chuyển sang lưu cục bộ /uploads/{}/",
-                    ex.getMessage(), safeFolder);
-        } finally {
-            if (tempFile != null) {
-                try {
-                    Files.deleteIfExists(tempFile);
-                } catch (IOException ignored) {
-                }
-            }
+            logger.warn("Không thể tải lên Cloudinary ({}), sử dụng bản lưu cục bộ /uploads/{}/{}",
+                    ex.getMessage(), safeFolder, localMirrorPath.getFileName());
         }
 
-        return saveLocally(file, safeFolder);
+        return buildLocalResponse(localMirrorPath, safeFolder, extension, file.getSize());
     }
 
-    private CloudinaryResponseDto saveLocally(MultipartFile file, String folderName) {
+    private Path saveLocalFile(MultipartFile file, String subFolder, String fileName) {
         try {
-            long startTime = System.currentTimeMillis();
-            String subFolder = sanitizeFolderName(folderName);
             Path baseUploadRoot = Paths.get("uploads").toAbsolutePath().normalize();
             Path uploadPath = baseUploadRoot.resolve(subFolder).normalize();
             if (!uploadPath.startsWith(baseUploadRoot)) {
@@ -139,47 +149,50 @@ public class CloudinaryServiceImpl implements CloudinaryService {
                 Files.createDirectories(uploadPath);
             }
 
-            String originalFilename = file.getOriginalFilename();
-            String extension = "";
-            if (originalFilename != null && originalFilename.contains(".")) {
-                String rawExt = originalFilename.substring(originalFilename.lastIndexOf("."))
-                        .replaceAll("[^a-zA-Z0-9.]", "");
-                extension = rawExt.isEmpty() ? ".bin" : rawExt.toLowerCase();
-            } else {
-                extension = ".png";
-            }
-
-            String fileName = UUID.randomUUID() + extension;
             Path targetLocation = uploadPath.resolve(fileName).normalize();
             if (!targetLocation.startsWith(uploadPath)) {
                 throw new SecurityException("Tên tệp tải lên không hợp lệ!");
             }
 
-            // Sử dụng transferTo trực tiếp để đạt tốc độ ghi đĩa nhanh nhất cho file dung lượng lớn
-            try {
-                file.transferTo(targetLocation);
-            } catch (Exception transferEx) {
-                try (InputStream in = file.getInputStream()) {
-                    Files.copy(in, targetLocation, StandardCopyOption.REPLACE_EXISTING);
-                }
+            try (InputStream in = file.getInputStream()) {
+                Files.copy(in, targetLocation, StandardCopyOption.REPLACE_EXISTING);
             }
-
-            String fileUrl = "/uploads/" + subFolder + "/" + fileName;
-            String extNoDot = extension.replace(".", "");
-            String resourceType = (extNoDot.matches("(?i)jpg|jpeg|png|gif|webp|bmp|svg")) ? "image" : "raw";
-            long elapsed = System.currentTimeMillis() - startTime;
-            logger.info("Đã lưu tệp tải lên cục bộ tại: {} ({} bytes trong {} ms)", fileUrl, file.getSize(), elapsed);
-            return new CloudinaryResponseDto(
-                    "local_" + subFolder + "_" + fileName,
-                    fileUrl,
-                    extNoDot,
-                    file.getSize(),
-                    resourceType
-            );
+            return targetLocation;
         } catch (IOException ex) {
             logger.error("Lỗi khi lưu trữ file cục bộ: {}", ex.getMessage(), ex);
             throw new RuntimeException("Không thể lưu trữ tệp tải lên: " + ex.getMessage(), ex);
         }
+    }
+
+    private void syncLocalMirrorFileName(Path localMirrorPath, String secureUrl) {
+        try {
+            int lastSlash = secureUrl.lastIndexOf('/');
+            if (lastSlash > 0 && lastSlash < secureUrl.length() - 1) {
+                String cldFileName = secureUrl.substring(lastSlash + 1).replaceAll("[^a-zA-Z0-9._-]", "");
+                if (!cldFileName.isEmpty()) {
+                    Path syncedPath = localMirrorPath.getParent().resolve(cldFileName).normalize();
+                    if (syncedPath.startsWith(localMirrorPath.getParent())) {
+                        Files.move(localMirrorPath, syncedPath, StandardCopyOption.REPLACE_EXISTING);
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    private CloudinaryResponseDto buildLocalResponse(Path localPath, String subFolder, String extension, long size) {
+        String fileName = localPath.getFileName().toString();
+        String fileUrl = "/uploads/" + subFolder + "/" + fileName;
+        String extNoDot = extension.replace(".", "");
+        String resourceType = (extNoDot.matches("(?i)jpg|jpeg|png|gif|webp|bmp|svg")) ? "image" : "raw";
+        logger.info("Đã lưu tệp tải lên cục bộ tại: {}", fileUrl);
+        return new CloudinaryResponseDto(
+                "local_" + subFolder + "_" + fileName,
+                fileUrl,
+                extNoDot,
+                size,
+                resourceType
+        );
     }
 
     @Override

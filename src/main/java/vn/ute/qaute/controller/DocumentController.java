@@ -74,57 +74,71 @@ public class DocumentController {
             return ResponseEntity.notFound().build();
         }
 
-        // Nếu là file lưu cục bộ trong /uploads/**
-        if (fileUrl.startsWith("/uploads/")) {
-            try {
-                Path baseUploadRoot = Paths.get("uploads").toAbsolutePath().normalize();
+        try {
+            Path baseUploadRoot = Paths.get("uploads").toAbsolutePath().normalize();
+            Path filePath = null;
+
+            if (fileUrl.startsWith("/uploads/")) {
                 String relative = fileUrl.substring("/uploads/".length());
-                Path filePath = baseUploadRoot.resolve(relative).normalize();
-
-                if (!filePath.startsWith(baseUploadRoot)) {
-                    return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-                }
-
-                // Nếu file mẫu trong DB bị lệch tên UUID, tự động fallback sang file PDF có sẵn trong uploads/documents
-                if (!Files.exists(filePath) && "PDF".equalsIgnoreCase(doc.getFileType())) {
-                    Path docDir = baseUploadRoot.resolve("documents");
-                    if (Files.exists(docDir)) {
-                        try (Stream<Path> stream = Files.list(docDir)) {
-                            Path fallbackPdf = stream
-                                    .filter(p -> p.toString().toLowerCase().endsWith(".pdf"))
-                                    .findFirst()
-                                    .orElse(null);
-                            if (fallbackPdf != null) {
-                                filePath = fallbackPdf;
-                            }
+                filePath = baseUploadRoot.resolve(relative).normalize();
+            } else if (fileUrl.startsWith("http://") || fileUrl.startsWith("https://")) {
+                // Nếu URL là link Cloudinary (https://res.cloudinary.com/.../qaute/documents/ten_file.pdf),
+                // ưu tiên đọc từ bản lưu đồng bộ tại uploads/documents/ten_file.pdf để không bị lỗi 401 PDF của Cloudinary Free
+                int lastSlash = fileUrl.lastIndexOf('/');
+                if (lastSlash > 0 && lastSlash < fileUrl.length() - 1) {
+                    String cldFileName = fileUrl.substring(lastSlash + 1).replaceAll("[^a-zA-Z0-9._-]", "");
+                    if (!cldFileName.isEmpty()) {
+                        Path candidate = baseUploadRoot.resolve("documents").resolve(cldFileName).normalize();
+                        if (candidate.startsWith(baseUploadRoot) && Files.exists(candidate)) {
+                            filePath = candidate;
                         }
                     }
                 }
-
-                if (Files.exists(filePath) && Files.isReadable(filePath)) {
-                    Resource resource = new UrlResource(filePath.toUri());
-                    String contentType = determineContentType(filePath, doc.getFileType());
-                    String displayFileName = (doc.getFileName() != null && !doc.getFileName().isBlank())
-                            ? doc.getFileName()
-                            : filePath.getFileName().toString();
-
-                    ContentDisposition disposition = (inline
-                            ? ContentDisposition.inline()
-                            : ContentDisposition.attachment())
-                            .filename(displayFileName, StandardCharsets.UTF_8)
-                            .build();
-
-                    return ResponseEntity.ok()
-                            .contentType(MediaType.parseMediaType(contentType))
-                            .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
-                            .header("X-Frame-Options", "SAMEORIGIN")
-                            .body(resource);
-                }
-            } catch (Exception ignored) {
             }
+
+            if (filePath != null && !filePath.startsWith(baseUploadRoot)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+
+            // Nếu file mẫu trong DB chưa có trên đĩa, fallback sang file PDF có sẵn trong uploads/documents
+            if ((filePath == null || !Files.exists(filePath)) && "PDF".equalsIgnoreCase(doc.getFileType())) {
+                Path docDir = baseUploadRoot.resolve("documents");
+                if (Files.exists(docDir)) {
+                    try (Stream<Path> stream = Files.list(docDir)) {
+                        Path fallbackPdf = stream
+                                .filter(p -> p.toString().toLowerCase().endsWith(".pdf"))
+                                .findFirst()
+                                .orElse(null);
+                        if (fallbackPdf != null) {
+                            filePath = fallbackPdf;
+                        }
+                    }
+                }
+            }
+
+            if (filePath != null && Files.exists(filePath) && Files.isReadable(filePath)) {
+                Resource resource = new UrlResource(filePath.toUri());
+                String contentType = determineContentType(filePath, doc.getFileType());
+                String displayFileName = (doc.getFileName() != null && !doc.getFileName().isBlank())
+                        ? doc.getFileName()
+                        : filePath.getFileName().toString();
+
+                ContentDisposition disposition = (inline
+                        ? ContentDisposition.inline()
+                        : ContentDisposition.attachment())
+                        .filename(displayFileName, StandardCharsets.UTF_8)
+                        .build();
+
+                return ResponseEntity.ok()
+                        .contentType(MediaType.parseMediaType(contentType))
+                        .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
+                        .header("X-Frame-Options", "SAMEORIGIN")
+                        .body(resource);
+            }
+        } catch (Exception ignored) {
         }
 
-        // Nếu là URL bên ngoài (Cloudinary...)
+        // Nếu không có bản lưu cục bộ thì chuyển hướng sang URL gốc
         return ResponseEntity.status(HttpStatus.FOUND)
                 .location(URI.create(fileUrl))
                 .build();

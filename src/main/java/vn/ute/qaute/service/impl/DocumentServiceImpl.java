@@ -83,8 +83,19 @@ public class DocumentServiceImpl implements DocumentService {
     public void deleteDocument(Long id) {
         Document doc = documentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài liệu văn bản với ID: " + id));
-        if (doc.getFileUrl() != null && doc.getFileUrl().startsWith("/uploads/")) {
-            cloudinaryService.deleteFile(doc.getFileUrl());
+        if (doc.getFileUrl() != null) {
+            if (doc.getFileUrl().startsWith("/uploads/")) {
+                cloudinaryService.deleteFile(doc.getFileUrl());
+            } else if (doc.getFileUrl().startsWith("http")) {
+                int lastSlash = doc.getFileUrl().lastIndexOf('/');
+                if (lastSlash > 0 && lastSlash < doc.getFileUrl().length() - 1) {
+                    String fileName = doc.getFileUrl().substring(lastSlash + 1);
+                    cloudinaryService.deleteFile("/uploads/documents/" + fileName);
+                    int dotIdx = fileName.lastIndexOf('.');
+                    String baseId = (dotIdx > 0) ? fileName.substring(0, dotIdx) : fileName;
+                    cloudinaryService.deleteFile("qaute/documents/" + baseId);
+                }
+            }
         }
         documentRepository.delete(doc);
     }
