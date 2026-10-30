@@ -30,9 +30,9 @@ public class AppointmentServiceImpl implements AppointmentService {
 
     @Autowired
     public AppointmentServiceImpl(AppointmentRepository appointmentRepository,
-                                  ConsultationRequestRepository requestRepository,
-                                  NotificationService notificationService,
-                                  vn.ute.qaute.service.MailService mailService) {
+            ConsultationRequestRepository requestRepository,
+            NotificationService notificationService,
+            vn.ute.qaute.service.MailService mailService) {
         this.appointmentRepository = appointmentRepository;
         this.requestRepository = requestRepository;
         this.notificationService = notificationService;
@@ -50,7 +50,8 @@ public class AppointmentServiceImpl implements AppointmentService {
         }
 
         ConsultationRequest consultation = requestRepository.findById(dto.getConsultationId())
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phiếu tư vấn với ID: " + dto.getConsultationId()));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Không tìm thấy phiếu tư vấn với ID: " + dto.getConsultationId()));
 
         if (consultation.getStatus() == RequestStatus.CLOSED) {
             throw new BadRequestException("Không thể đặt lịch hẹn cho phiếu tư vấn đã đóng!");
@@ -64,15 +65,15 @@ public class AppointmentServiceImpl implements AppointmentService {
             requestRepository.save(consultation);
         }
 
-        // Chống spam: Kiểm tra xem phiếu tư vấn này đã có lịch hẹn đang chờ hoặc cùng khung giờ chưa
+        // Chống spam: Kiểm tra xem phiếu tư vấn này đã có lịch hẹn đang chờ hoặc cùng
+        // khung giờ chưa
         List<Appointment> existingAppointments = appointmentRepository.findByConsultationId(dto.getConsultationId());
-        boolean hasDuplicate = existingAppointments.stream().anyMatch(a ->
-                a.getStatus() == AppointmentStatus.SCHEDULED
+        boolean hasDuplicate = existingAppointments.stream().anyMatch(a -> a.getStatus() == AppointmentStatus.SCHEDULED
                 && a.getMeetingTime() != null
-                && Math.abs(java.time.Duration.between(a.getMeetingTime(), dto.getMeetingTime()).toMinutes()) < 30
-        );
+                && Math.abs(java.time.Duration.between(a.getMeetingTime(), dto.getMeetingTime()).toMinutes()) < 30);
         if (hasDuplicate) {
-            throw new BadRequestException("Phiếu tư vấn này đã có lịch hẹn đang lên lịch hoặc gần khung giờ này! Vui lòng không gửi yêu cầu trùng lặp.");
+            throw new BadRequestException(
+                    "Phiếu tư vấn này đã có lịch hẹn đang lên lịch hoặc gần khung giờ này! Vui lòng không gửi yêu cầu trùng lặp.");
         }
 
         Appointment appointment = new Appointment(
@@ -81,8 +82,7 @@ public class AppointmentServiceImpl implements AppointmentService {
                 lecturer,
                 dto.getMeetingTime(),
                 dto.getLocationOrLink(),
-                dto.getNote()
-        );
+                dto.getNote());
 
         Appointment saved = appointmentRepository.save(appointment);
 
@@ -92,12 +92,12 @@ public class AppointmentServiceImpl implements AppointmentService {
                 "Bạn có lịch hẹn tư vấn mới!",
                 "Giảng viên " + lecturer.getFullName() + " đã đặt lịch hẹn lúc: " + dto.getMeetingTime().toString()
                         + " tại: " + dto.getLocationOrLink(),
-                "/student/appointments"
-        );
+                "/student/appointments");
 
         // Gửi email tự động cho sinh viên
         if (consultation.getStudent().getEmail() != null) {
-            String timeStr = dto.getMeetingTime().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm - dd/MM/yyyy"));
+            String timeStr = dto.getMeetingTime()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm - dd/MM/yyyy"));
             mailService.sendNotificationEmail(
                     consultation.getStudent().getEmail(),
                     "Lịch hẹn tư vấn mới với Thầy/Cô " + lecturer.getFullName(),
@@ -106,9 +106,8 @@ public class AppointmentServiceImpl implements AppointmentService {
                             + "• Thời gian: " + timeStr + "\n"
                             + "• Địa điểm/Link: " + dto.getLocationOrLink() + "\n"
                             + "• Ghi chú: " + (dto.getNote() != null ? dto.getNote() : "Không có") + "\n\n"
-                            + "Vui lòng đăng nhập vào hệ thống để xác nhận tham gia hoặc xin dời lịch nếu cần.",
-                    "/student/appointments"
-            );
+                            + "Vui lòng đăng nhập vào hệ thống để xác nhận hoàn thành hoặc xin dời lịch nếu cần.",
+                    "/student/appointments");
         }
 
         return saved;
@@ -151,22 +150,40 @@ public class AppointmentServiceImpl implements AppointmentService {
 
     @Override
     @Transactional
-    public void confirmAppointment(Long appointmentId, User student) {
+    public void confirmAppointment(Long appointmentId, User user) {
         Appointment appointment = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy lịch hẹn"));
-        if (!appointment.getStudent().getId().equals(student.getId())) {
-            throw new vn.ute.qaute.exception.BadRequestException("Bạn không có quyền xác nhận lịch hẹn này");
+
+        boolean isStudent = appointment.getStudent() != null && appointment.getStudent().getId().equals(user.getId());
+        boolean isLecturer = appointment.getLecturer() != null && appointment.getLecturer().getId().equals(user.getId());
+        boolean isAdmin = user.getRole() == RoleType.ROLE_ADMIN;
+
+        if (!isStudent && !isLecturer && !isAdmin) {
+            throw new BadRequestException("Bạn không có quyền xác nhận hoàn thành lịch hẹn này!");
         }
+
         appointment.setStatus(AppointmentStatus.COMPLETED);
         appointmentRepository.save(appointment);
 
-        // Thông báo cho Giảng viên
-        notificationService.sendNotification(
-                appointment.getLecturer(),
-                "Sinh viên đã hoàn tất/xác nhận lịch hẹn",
-                "Sinh viên " + student.getFullName() + " đã xác nhận tham gia lịch hẹn ngày " + appointment.getMeetingTime().toString(),
-                "/lecturer/schedule"
-        );
+        String timeStr = appointment.getMeetingTime() != null
+                ? appointment.getMeetingTime().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm - dd/MM/yyyy"))
+                : "";
+
+        if (isLecturer || isAdmin) {
+            // Thông báo cho Sinh viên khi Giảng viên xác nhận hoàn thành lịch hẹn
+            notificationService.sendNotification(
+                    appointment.getStudent(),
+                    "Buổi hẹn tư vấn đã hoàn thành",
+                    "Thầy/Cô " + user.getFullName() + " đã xác nhận hoàn thành lịch hẹn tư vấn lúc " + timeStr,
+                    "/student/appointments");
+        } else {
+            // Thông báo cho Giảng viên khi Sinh viên xác nhận hoàn thành lịch hẹn
+            notificationService.sendNotification(
+                    appointment.getLecturer(),
+                    "Sinh viên đã hoàn tất/xác nhận lịch hẹn",
+                    "Sinh viên " + user.getFullName() + " đã xác nhận hoàn thành lịch hẹn lúc " + timeStr,
+                    "/lecturer/schedule");
+        }
     }
 
     @Override
@@ -194,8 +211,7 @@ public class AppointmentServiceImpl implements AppointmentService {
                 targetUser,
                 "Lịch hẹn tư vấn đã bị hủy/xin dời lịch",
                 cancelBy + " đã hủy lịch hẹn. Lý do: " + (reason != null ? reason : "Không có lý do cụ thể"),
-                isStudent ? "/lecturer/schedule" : "/student/appointments"
-        );
+                isStudent ? "/lecturer/schedule" : "/student/appointments");
 
         if (targetUser.getEmail() != null) {
             mailService.sendNotificationEmail(
@@ -205,8 +221,7 @@ public class AppointmentServiceImpl implements AppointmentService {
                     cancelBy + " đã thông báo hủy/xin dời lịch hẹn vào ngày " + appointment.getMeetingTime().toString()
                             + ".\nLý do: " + (reason != null ? reason : "Không có lý do cụ thể") + "\n\n"
                             + "Vui lòng kiểm tra lại lịch trên hệ thống.",
-                    isStudent ? "/lecturer/schedule" : "/student/appointments"
-            );
+                    isStudent ? "/lecturer/schedule" : "/student/appointments");
         }
     }
 }

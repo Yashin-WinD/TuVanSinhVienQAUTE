@@ -61,27 +61,13 @@ public class ConsultationServiceImpl implements ConsultationService {
 
         ConsultationRequest saved = requestRepository.save(request);
 
-        // Thông báo cho sinh viên
+        // Thông báo trên hệ thống cho sinh viên khi gửi câu hỏi (trạng thái: Chờ tiếp nhận - PENDING)
         notificationService.sendNotification(
                 student,
-                "Tạo phiếu tư vấn thành công",
-                "Câu hỏi '" + saved.getTitle() + "' của bạn đã được gửi đến ban cố vấn.",
+                "Gửi câu hỏi tư vấn thành công",
+                "Câu hỏi '" + saved.getTitle() + "' đã được gửi lên hệ thống và đang chờ giảng viên tiếp nhận.",
                 "/student/requests/" + saved.getId()
         );
-
-        // Auto-Mailer: Gửi email thông báo cho sinh viên xác nhận đã nhận câu hỏi
-        if (student.getEmail() != null) {
-            mailService.sendNotificationEmail(
-                    student.getEmail(),
-                    "Xác nhận gửi câu hỏi tư vấn #" + saved.getId(),
-                    "Câu hỏi tư vấn của bạn đã được tiếp nhận",
-                    "Chào " + student.getFullName() + ",\n\nCâu hỏi: '" + saved.getTitle() + "' thuộc Khoa/Ban: " 
-                            + field.getDepartment().getName() + " đã được gửi lên hệ thống.\n"
-                            + "Các giảng viên phụ trách sẽ xem xét và phản hồi sớm nhất có thể.\n\n"
-                            + "Trân trọng,\nBan Tư vấn QAUTE",
-                    "/student/requests/" + saved.getId()
-            );
-        }
 
         return saved;
     }
@@ -134,6 +120,30 @@ public class ConsultationServiceImpl implements ConsultationService {
                 "Phiếu tư vấn: '" + request.getTitle() + "' từ sinh viên " + request.getStudent().getFullName(),
                 "/lecturer/requests/" + request.getId() + "/answer"
         );
+
+        // Thông báo & gửi Email cho sinh viên khi câu hỏi thực sự được Giảng viên tiếp nhận / phân công
+        User student = request.getStudent();
+        if (student != null) {
+            notificationService.sendNotification(
+                    student,
+                    "Câu hỏi #" + request.getId() + " đã được tiếp nhận",
+                    "Thầy/Cô " + lecturer.getFullName() + " đã tiếp nhận và đang xử lý câu hỏi: '" + request.getTitle() + "'",
+                    "/student/requests/" + request.getId()
+            );
+
+            if (student.getEmail() != null) {
+                mailService.sendNotificationEmail(
+                        student.getEmail(),
+                        "Phiếu tư vấn #" + request.getId() + " đã được tiếp nhận xử lý",
+                        "Câu hỏi tư vấn của bạn đã được giảng viên tiếp nhận",
+                        "Chào " + student.getFullName() + ",\n\nCâu hỏi: '" + request.getTitle() + "' (Mã phiếu #" + request.getId() + ") "
+                                + "đã được Thầy/Cô " + lecturer.getFullName() + " tiếp nhận xử lý.\n"
+                                + "Thầy/Cô sẽ xem xét và gửi phản hồi giải đáp cho bạn trong thời gian sớm nhất.\n\n"
+                                + "Trân trọng,\nBan Tư vấn QAUTE",
+                        "/student/requests/" + request.getId()
+                );
+            }
+        }
     }
 
     @Override

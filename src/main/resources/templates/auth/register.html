@@ -58,11 +58,11 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Mật khẩu</label>
-                                <input type="password" class="form-control" th:field="*{password}" placeholder="Tối thiểu 6 ký tự" required>
+                                <input type="password" class="form-control" th:field="*{password}" minlength="6" placeholder="Tối thiểu 6 ký tự" required oninvalid="this.setCustomValidity('Mật khẩu phải có từ 6 ký tự trở lên')" oninput="this.setCustomValidity('')">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Xác nhận mật khẩu</label>
-                                <input type="password" class="form-control" th:field="*{confirmPassword}" placeholder="Nhập lại mật khẩu" required>
+                                <input type="password" class="form-control" th:field="*{confirmPassword}" minlength="6" placeholder="Nhập lại mật khẩu" required oninvalid="this.setCustomValidity('Vui lòng xác nhận mật khẩu (tối thiểu 6 ký tự)')" oninput="this.setCustomValidity('')">
                             </div>
                         </div>
 

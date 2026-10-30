@@ -77,14 +77,14 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void changePassword(Long userId, String oldPassword, String newPassword) {
-        if (newPassword == null || newPassword.length() < 6) {
-            throw new BadRequestException("Mật khẩu mới phải có ít nhất 6 ký tự");
+        if (newPassword == null || newPassword.trim().length() < 6) {
+            throw new BadRequestException("Mật khẩu mới phải có từ 6 ký tự trở lên!");
         }
         User user = getUserById(userId);
         if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
-            throw new BadRequestException("Mật khẩu hiện tại không chính xác");
+            throw new BadRequestException("Mật khẩu hiện tại không chính xác!");
         }
-        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setPassword(passwordEncoder.encode(newPassword.trim()));
         userRepository.save(user);
     }
 
@@ -99,13 +99,16 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public User createUser(User user) {
+        if (user.getPassword() == null || user.getPassword().trim().length() < 6) {
+            throw new BadRequestException("Mật khẩu phải có từ 6 ký tự trở lên!");
+        }
         if (userRepository.existsByUsername(user.getUsername())) {
             throw new BadRequestException("Tên đăng nhập đã tồn tại");
         }
         if (userRepository.existsByEmail(user.getEmail())) {
             throw new BadRequestException("Email đã được sử dụng");
         }
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        user.setPassword(passwordEncoder.encode(user.getPassword().trim()));
         return userRepository.save(user);
     }
 

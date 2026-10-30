@@ -248,6 +248,32 @@ public class LecturerController {
         return "redirect:/lecturer/schedule";
     }
 
+    @PostMapping("/schedule/{id}/confirm")
+    public String confirmSchedule(@PathVariable("id") Long id, RedirectAttributes redirectAttributes) {
+        try {
+            User lecturer = userService.getCurrentUser();
+            appointmentService.confirmAppointment(id, lecturer);
+            redirectAttributes.addFlashAttribute("successMessage", "Đã xác nhận hoàn thành lịch hẹn tư vấn #" + id + "!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Lỗi: " + e.getMessage());
+        }
+        return "redirect:/lecturer/schedule";
+    }
+
+    @PostMapping("/schedule/{id}/cancel")
+    public String cancelSchedule(@PathVariable("id") Long id,
+                                 @RequestParam("reason") String reason,
+                                 RedirectAttributes redirectAttributes) {
+        try {
+            User lecturer = userService.getCurrentUser();
+            appointmentService.cancelAppointment(id, reason, lecturer);
+            redirectAttributes.addFlashAttribute("successMessage", "Đã hủy lịch hẹn tư vấn #" + id + " thành công!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Lỗi: " + e.getMessage());
+        }
+        return "redirect:/lecturer/schedule";
+    }
+
     @GetMapping("/profile")
     public String profilePage(Model model) {
         return "lecturer/profile";
@@ -280,6 +306,10 @@ public class LecturerController {
                                  @RequestParam("newPassword") String newPassword,
                                  @RequestParam("confirmPassword") String confirmPassword,
                                  RedirectAttributes redirectAttributes) {
+        if (newPassword == null || newPassword.trim().length() < 6) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Mật khẩu mới phải có từ 6 ký tự trở lên!");
+            return "redirect:/lecturer/profile";
+        }
         if (!newPassword.equals(confirmPassword)) {
             redirectAttributes.addFlashAttribute("errorMessage", "Mật khẩu xác nhận không khớp!");
             return "redirect:/lecturer/profile";

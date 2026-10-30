@@ -76,6 +76,9 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void registerStudent(RegisterRequest request) {
+        if (request.getPassword() == null || request.getPassword().trim().length() < 6) {
+            throw new BadRequestException("Mật khẩu phải có từ 6 ký tự trở lên!");
+        }
         if (!request.getPassword().equals(request.getConfirmPassword())) {
             throw new BadRequestException("Mật khẩu xác nhận không khớp");
         }
@@ -131,6 +134,9 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void resetPasswordWithOtp(ResetPasswordRequest request) {
+        if (request.getNewPassword() == null || request.getNewPassword().trim().length() < 6) {
+            throw new BadRequestException("Mật khẩu mới phải có từ 6 ký tự trở lên!");
+        }
         if (!request.getNewPassword().equals(request.getConfirmPassword())) {
             throw new BadRequestException("Mật khẩu xác nhận không khớp");
         }

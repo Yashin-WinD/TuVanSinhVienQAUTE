@@ -30,8 +30,16 @@
                     <!-- Danh sách các cuộc hẹn -->
                     <div class="col-lg-8">
                         <div class="card card-custom">
-                            <div class="card-header card-header-custom">
-                                <span class="fs-5"><i class="bi bi-calendar-check me-2 text-primary"></i>Danh sách các cuộc hẹn sắp tới</span>
+                            <div class="card-header card-header-custom d-flex flex-wrap justify-content-between align-items-center gap-2">
+                                <span class="fs-5"><i class="bi bi-calendar-check me-2 text-primary"></i>Danh sách các cuộc hẹn tư vấn</span>
+                                <div class="d-flex flex-wrap gap-1">
+                                    <a th:href="@{/lecturer/schedule}" class="btn btn-sm"
+                                       th:classappend="${selectedStatus == null ? 'btn-primary' : 'btn-outline-secondary'}">Tất cả</a>
+                                    <a th:each="st : ${statuses}" th:href="@{/lecturer/schedule(status=${st})}"
+                                       class="btn btn-sm"
+                                       th:classappend="${selectedStatus == st ? 'btn-primary' : 'btn-outline-secondary'}"
+                                       th:text="${st.displayName}">Trạng thái</a>
+                                </div>
                             </div>
                             <div class="card-body p-0">
                                 <div class="table-responsive">
@@ -43,11 +51,12 @@
                                                 <th>Địa điểm / Link Meet</th>
                                                 <th>Ghi chú</th>
                                                 <th>Trạng thái</th>
+                                                <th class="text-end pe-3">Thao tác</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             <tr th:if="${#lists.isEmpty(appointments)}">
-                                                <td colspan="5" class="text-center py-4 text-muted">Chưa có lịch hẹn tư vấn nào.</td>
+                                                <td colspan="6" class="text-center py-4 text-muted">Chưa có lịch hẹn tư vấn nào.</td>
                                             </tr>
                                             <tr th:each="apt : ${appointments}">
                                                 <td>
@@ -60,9 +69,35 @@
                                                 <td>
                                                     <span th:text="${apt.locationOrLink}">Địa điểm</span>
                                                 </td>
-                                                <td th:text="${apt.note != null ? apt.note : '-'}">-</td>
                                                 <td>
-                                                    <span class="badge bg-primary" th:text="${apt.status.displayName}">Đã lên lịch</span>
+                                                    <span th:text="${apt.note != null && !apt.note.isEmpty() ? apt.note : '-'}">-</span>
+                                                    <div th:if="${apt.status.name() == 'CANCELLED' && apt.cancelReason != null}" class="text-danger small mt-1">
+                                                        <strong>Lý do hủy:</strong> <span th:text="${apt.cancelReason}"></span>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <span class="badge"
+                                                          th:classappend="${apt.status.name() == 'SCHEDULED' ? 'bg-primary' : (apt.status.name() == 'COMPLETED' ? 'bg-success' : 'bg-danger')}"
+                                                          th:text="${apt.status.displayName}">Đã lên lịch</span>
+                                                </td>
+                                                <td class="text-end pe-3">
+                                                    <div th:if="${apt.status.name() == 'SCHEDULED'}" class="d-flex justify-content-end gap-1">
+                                                        <form th:action="@{/lecturer/schedule/{id}/confirm(id=${apt.id})}" method="post" style="display:inline;">
+                                                            <button type="submit" class="btn btn-sm btn-success" title="Xác nhận hoàn thành buổi hẹn tư vấn">
+                                                                <i class="bi bi-check-lg me-1"></i>Hoàn thành
+                                                            </button>
+                                                        </form>
+                                                        <button type="button" class="btn btn-sm btn-outline-danger"
+                                                                th:data-id="${apt.id}"
+                                                                onclick="openCancelScheduleModal(this.getAttribute('data-id'))" title="Hủy hoặc dời lịch hẹn">
+                                                            <i class="bi bi-x-circle"></i>
+                                                        </button>
+                                                    </div>
+                                                    <span th:unless="${apt.status.name() == 'SCHEDULED'}" class="text-muted small">
+                                                        <i class="bi bi-check2-all" th:if="${apt.status.name() == 'COMPLETED'}"></i>
+                                                        <i class="bi bi-dash-circle" th:if="${apt.status.name() == 'CANCELLED'}"></i>
+                                                        <span th:text="${apt.status.name() == 'COMPLETED' ? 'Đã xong' : 'Đã đóng'}"></span>
+                                                    </span>
                                                 </td>
                                             </tr>
                                         </tbody>
@@ -106,10 +141,41 @@
         </div>
     </div>
 
+    <!-- Modal Hủy Lịch Hẹn cho Giảng viên -->
+    <div class="modal fade" id="cancelScheduleModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form id="cancelScheduleForm" method="post" action="">
+                    <div class="modal-header py-3">
+                        <h5 class="modal-title text-danger fw-bold"><i class="bi bi-exclamation-octagon me-2"></i>Hủy / Dời Lịch Hẹn Tư Vấn</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="small text-muted mb-3">Nhập lý do hủy hoặc dời lịch để thông báo tự động qua hệ thống và Email cho sinh viên.</p>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Lý do hủy / dời lịch <span class="text-danger">*</span></label>
+                            <textarea name="reason" class="form-control" rows="3" required placeholder="vd: Giảng viên có lịch họp đột xuất của Khoa, sẽ đặt lại lịch mới..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer py-2">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+                        <button type="submit" class="btn btn-danger btn-sm fw-semibold">Xác nhận hủy lịch</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <div th:replace="~{fragments/footer :: footer}"></div>
     <div th:replace="~{fragments/scripts :: scripts}"></div>
 
     <script>
+        function openCancelScheduleModal(appointmentId) {
+            const form = document.getElementById('cancelScheduleForm');
+            form.action = '/lecturer/schedule/' + appointmentId + '/cancel';
+            new bootstrap.Modal(document.getElementById('cancelScheduleModal')).show();
+        }
+
         document.addEventListener("DOMContentLoaded", function () {
             const meetingTimeInput = document.getElementById("meetingTimeInput");
             if (meetingTimeInput) {
