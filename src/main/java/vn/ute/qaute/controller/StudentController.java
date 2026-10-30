@@ -71,9 +71,9 @@ public class StudentController {
         try {
             User student = userService.getCurrentUser();
 
-            // Nếu có đính kèm file ảnh minh chứng thì upload lên Cloudinary
+            // Nếu có đính kèm file minh chứng (ảnh, PDF, tài liệu) thì lưu tức thì và đồng bộ Cloudinary
             if (evidenceFile != null && !evidenceFile.isEmpty()) {
-                CloudinaryResponseDto uploadRes = cloudinaryService.uploadImage(evidenceFile, "evidence");
+                CloudinaryResponseDto uploadRes = cloudinaryService.uploadFile(evidenceFile, "evidence");
                 if (uploadRes != null) {
                     dto.setAttachmentUrls(uploadRes.getUrl());
                 }
