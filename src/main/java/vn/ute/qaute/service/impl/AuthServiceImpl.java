@@ -82,6 +82,9 @@ public class AuthServiceImpl implements AuthService {
         if (!request.getPassword().equals(request.getConfirmPassword())) {
             throw new BadRequestException("Mật khẩu xác nhận không khớp");
         }
+        if (request.getPhone() == null || !request.getPhone().trim().matches("^[0-9]{10}$")) {
+            throw new BadRequestException("Số điện thoại không hợp lệ! Vui lòng nhập đúng 10 chữ số.");
+        }
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new BadRequestException("Tên đăng nhập đã được sử dụng");
         }

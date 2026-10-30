@@ -63,10 +63,14 @@ public class UserServiceImpl implements UserService {
     public void updateProfile(Long userId, String fullName, String phone, String avatarUrl) {
         User user = getUserById(userId);
         if (fullName != null && !fullName.trim().isEmpty()) {
-            user.setFullName(fullName);
+            user.setFullName(fullName.trim());
         }
-        if (phone != null) {
-            user.setPhone(phone);
+        if (phone != null && !phone.trim().isEmpty()) {
+            String cleanPhone = phone.trim();
+            if (!cleanPhone.matches("^[0-9]{10}$")) {
+                throw new BadRequestException("Số điện thoại không hợp lệ! Vui lòng nhập đúng 10 chữ số.");
+            }
+            user.setPhone(cleanPhone);
         }
         if (avatarUrl != null && !avatarUrl.trim().isEmpty()) {
             user.setAvatarUrl(avatarUrl);

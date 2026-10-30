@@ -53,8 +53,8 @@
                             </div>
 
                             <div class="col-md-12">
-                                <label class="form-label fw-semibold">Số điện thoại</label>
-                                <input type="tel" class="form-control" th:field="*{phone}" placeholder="vd: 0912345678">
+                                <label class="form-label fw-semibold">Số điện thoại <span class="text-danger">*</span></label>
+                                <input type="tel" class="form-control" th:field="*{phone}" pattern="[0-9]{10}" minlength="10" maxlength="10" placeholder="Nhập đúng 10 chữ số (vd: 0912345678)" required oninvalid="this.setCustomValidity('Số điện thoại phải gồm đúng 10 chữ số')" oninput="this.value = this.value.replace(/[^0-9]/g, ''); this.setCustomValidity('')">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Mật khẩu</label>
