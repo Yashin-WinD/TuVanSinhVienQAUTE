@@ -62,22 +62,24 @@ public class MailServiceImpl implements MailService {
         log.info("📧 [QAUTE NOTIFICATION] Tới: {} | Chủ đề: {} | {}", toEmail, subject, title);
 
         if (mailSender != null) {
-            try {
-                MimeMessage message = mailSender.createMimeMessage();
-                MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            java.util.concurrent.CompletableFuture.runAsync(() -> {
+                try {
+                    MimeMessage message = mailSender.createMimeMessage();
+                    MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-                helper.setFrom(fromEmail, "Cổng Tư Vấn QAUTE");
-                helper.setTo(toEmail);
-                helper.setSubject("[QAUTE] " + subject);
+                    helper.setFrom(fromEmail, "Cổng Tư Vấn QAUTE");
+                    helper.setTo(toEmail);
+                    helper.setSubject("[QAUTE] " + subject);
 
-                String html = buildNotificationHtml(title, messageContent, actionUrl);
-                helper.setText(html, true);
+                    String html = buildNotificationHtml(title, messageContent, actionUrl);
+                    helper.setText(html, true);
 
-                mailSender.send(message);
-                log.info("Đã gửi email thông báo thành công tới: {}", toEmail);
-            } catch (Exception e) {
-                log.warn("Không thể gửi email thông báo qua SMTP: {}", e.getMessage());
-            }
+                    mailSender.send(message);
+                    log.info("Đã gửi email thông báo thành công tới: {}", toEmail);
+                } catch (Exception e) {
+                    log.warn("Không thể gửi email thông báo qua SMTP: {}", e.getMessage());
+                }
+            });
         }
     }
 

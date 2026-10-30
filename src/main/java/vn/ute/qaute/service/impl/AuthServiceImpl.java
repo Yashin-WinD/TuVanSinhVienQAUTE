@@ -76,8 +76,14 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void registerStudent(RegisterRequest request) {
+        if (request.getPassword() == null || request.getPassword().trim().length() < 6) {
+            throw new BadRequestException("Mật khẩu phải có từ 6 ký tự trở lên!");
+        }
         if (!request.getPassword().equals(request.getConfirmPassword())) {
             throw new BadRequestException("Mật khẩu xác nhận không khớp");
+        }
+        if (request.getPhone() == null || !request.getPhone().trim().matches("^[0-9]{10}$")) {
+            throw new BadRequestException("Số điện thoại không hợp lệ! Vui lòng nhập đúng 10 chữ số.");
         }
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new BadRequestException("Tên đăng nhập đã được sử dụng");
@@ -131,6 +137,9 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void resetPasswordWithOtp(ResetPasswordRequest request) {
+        if (request.getNewPassword() == null || request.getNewPassword().trim().length() < 6) {
+            throw new BadRequestException("Mật khẩu mới phải có từ 6 ký tự trở lên!");
+        }
         if (!request.getNewPassword().equals(request.getConfirmPassword())) {
             throw new BadRequestException("Mật khẩu xác nhận không khớp");
         }

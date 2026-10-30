@@ -61,7 +61,7 @@
 
                                 <div class="mb-4">
                                     <label class="form-label fw-semibold">Số điện thoại</label>
-                                    <input type="tel" name="phone" class="form-control" th:value="${currentUser.phone}">
+                                    <input type="tel" name="phone" class="form-control" th:value="${currentUser.phone}" pattern="[0-9]{10}" minlength="10" maxlength="10" placeholder="Nhập đúng 10 chữ số (vd: 0912345678)" required oninvalid="this.setCustomValidity('Số điện thoại phải gồm đúng 10 chữ số')" oninput="this.value = this.value.replace(/[^0-9]/g, ''); this.setCustomValidity('')">
                                 </div>
 
                                 <button type="submit" class="btn btn-primary w-100 fw-bold">Lưu Thay Đổi</button>
@@ -80,11 +80,11 @@
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label fw-semibold">Mật khẩu mới</label>
-                                    <input type="password" name="newPassword" class="form-control" required>
+                                    <input type="password" name="newPassword" class="form-control" minlength="6" placeholder="Tối thiểu 6 ký tự" required oninvalid="this.setCustomValidity('Mật khẩu mới phải có từ 6 ký tự trở lên')" oninput="this.setCustomValidity('')">
                                 </div>
                                 <div class="mb-4">
                                     <label class="form-label fw-semibold">Xác nhận mật khẩu mới</label>
-                                    <input type="password" name="confirmPassword" class="form-control" required>
+                                    <input type="password" name="confirmPassword" class="form-control" minlength="6" placeholder="Nhập lại mật khẩu mới" required oninvalid="this.setCustomValidity('Vui lòng xác nhận mật khẩu mới (tối thiểu 6 ký tự)')" oninput="this.setCustomValidity('')">
                                 </div>
                                 <button type="submit" class="btn btn-warning w-100 fw-bold">Cập Nhật Mật Khẩu</button>
                             </form>

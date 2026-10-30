@@ -2,6 +2,7 @@ package vn.ute.qaute.dto.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public class RegisterRequest {
@@ -24,6 +25,7 @@ public class RegisterRequest {
     @Email(message = "Email không hợp lệ")
     private String email;
 
+    @Pattern(regexp = "^[0-9]{10}$", message = "Số điện thoại phải gồm đúng 10 chữ số")
     private String phone;
 
     @NotBlank(message = "Mã số sinh viên không được để trống")
