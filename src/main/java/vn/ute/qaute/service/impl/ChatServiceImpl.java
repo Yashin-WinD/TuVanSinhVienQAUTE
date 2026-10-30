@@ -8,6 +8,7 @@ import vn.ute.qaute.entity.ChatMessage;
 import vn.ute.qaute.entity.ConsultationRequest;
 import vn.ute.qaute.entity.User;
 import vn.ute.qaute.entity.enums.MessageType;
+import vn.ute.qaute.entity.enums.RequestStatus;
 import vn.ute.qaute.exception.ResourceNotFoundException;
 import vn.ute.qaute.repository.ChatMessageRepository;
 import vn.ute.qaute.repository.ConsultationRequestRepository;
@@ -40,6 +41,11 @@ public class ChatServiceImpl implements ChatService {
 
         User sender = userRepository.findById(senderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + senderId));
+
+        if (consultation.getStatus() == RequestStatus.ASSIGNED) {
+            consultation.setStatus(RequestStatus.IN_PROGRESS);
+            requestRepository.save(consultation);
+        }
 
         MessageType type = dto.getMessageType() != null ? dto.getMessageType() : MessageType.TEXT;
 

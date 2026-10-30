@@ -5,12 +5,27 @@
 let stompClient = null;
 let currentSubscription = null;
 let activeConsultationId = null;
+let chatControlsBound = false;
 let currentChatUser = {
     id: null,
     name: '',
     avatar: '',
     role: ''
 };
+
+/**
+ * Cập nhật trạng thái hiển thị kết nối trên giao diện
+ */
+function updateConnectionStatus(isConnected) {
+    const pulse = document.querySelector('.pulse-indicator');
+    if (pulse) {
+        if (isConnected) {
+            pulse.innerHTML = '<span class="dot" style="background:#198754;box-shadow:0 0 0 0 rgba(25,135,84,0.7);"></span> <span class="text-success fw-semibold">Realtime STOMP (Đã kết nối)</span>';
+        } else {
+            pulse.innerHTML = '<span class="dot" style="background:#dc3545;box-shadow:0 0 0 0 rgba(220,53,69,0.7);"></span> <span class="text-danger fw-semibold">Đang kết nối...</span>';
+        }
+    }
+}
 
 /**
  * Khởi tạo kết nối STOMP và thiết lập phòng chat ban đầu
@@ -22,24 +37,53 @@ function initChat(consultationId, currentUserId, currentUserName, currentUserAva
     currentChatUser.role = currentUserRole;
     activeConsultationId = consultationId;
 
-    const socket = new SockJS('/ws-qaute');
-    stompClient = Stomp.over(socket);
-    stompClient.debug = null; // Tắt log rác trên console
-
-    stompClient.connect({}, function (frame) {
-        console.log('STOMP Connected. User:', currentUserName, 'Role:', currentUserRole);
-
-        if (activeConsultationId) {
-            subscribeToConsultation(activeConsultationId);
-        }
-
-        scrollToBottom();
-    }, function (error) {
-        console.error('Lỗi kết nối WebSocket STOMP: ', error);
-    });
-
+    connectWebSocket();
     bindChatControls();
     bindSearchFilter();
+}
+
+/**
+ * Kết nối WebSocket qua SockJS & STOMP
+ */
+function connectWebSocket() {
+    updateConnectionStatus(false);
+    try {
+        const socket = new SockJS('/ws-qaute');
+        stompClient = Stomp.over(socket);
+        // stomp debug log
+        stompClient.debug = function (str) {
+            console.debug('[STOMP]', str);
+        };
+
+        stompClient.connect({}, function (frame) {
+            console.log('STOMP Connected thành công. User:', currentChatUser.name, 'Role:', currentChatUser.role);
+            updateConnectionStatus(true);
+
+            if (activeConsultationId) {
+                subscribeToConsultation(activeConsultationId);
+            }
+
+            scrollToBottom();
+        }, function (error) {
+            console.error('Lỗi kết nối WebSocket STOMP: ', error);
+            updateConnectionStatus(false);
+            // Tự động kết nối lại sau 4 giây
+            setTimeout(reconnectChat, 4000);
+        });
+    } catch (e) {
+        console.error('Không thể tạo kết nối SockJS:', e);
+        updateConnectionStatus(false);
+        setTimeout(reconnectChat, 4000);
+    }
+}
+
+/**
+ * Tự động kết nối lại khi mất mạng / socket đóng
+ */
+function reconnectChat() {
+    if (stompClient && stompClient.connected) return;
+    console.log('Đang thử kết nối lại máy chủ chat...');
+    connectWebSocket();
 }
 
 /**
@@ -49,12 +93,18 @@ function subscribeToConsultation(consultationId) {
     if (!stompClient || !stompClient.connected) return;
 
     if (currentSubscription) {
-        currentSubscription.unsubscribe();
+        try {
+            currentSubscription.unsubscribe();
+        } catch (e) {}
     }
 
     currentSubscription = stompClient.subscribe('/topic/consultation.' + consultationId, function (messageOutput) {
-        const message = JSON.parse(messageOutput.body);
-        displayMessage(message, currentChatUser.id);
+        try {
+            const message = JSON.parse(messageOutput.body);
+            displayMessage(message, currentChatUser.id);
+        } catch (e) {
+            console.error('Lỗi phân tích tin nhắn STOMP:', e);
+        }
     });
 
     activeConsultationId = consultationId;
@@ -86,7 +136,6 @@ function switchConversation(consultationId, partnerName, partnerAvatar, title, s
     const activeCard = document.querySelector(`.conversation-card[data-id="${consultationId}"]`);
     if (activeCard) {
         activeCard.classList.add('active');
-        // Xóa badge tin nhắn chưa đọc nếu có
         const unreadDot = activeCard.querySelector('.badge-unread');
         if (unreadDot) unreadDot.remove();
     }
@@ -129,6 +178,8 @@ function switchConversation(consultationId, partnerName, partnerAvatar, title, s
  * Gắn sự kiện cho các nút điều khiển gửi tin nhắn
  */
 function bindChatControls() {
+    if (chatControlsBound) return;
+
     const sendBtn = document.getElementById('btnSendMessage');
     const messageInput = document.getElementById('messageInput');
     const fileInput = document.getElementById('chatFileInput');
@@ -138,12 +189,15 @@ function bindChatControls() {
             sendCurrentMessage();
         });
 
-        messageInput.addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
+        // Hỗ trợ Enter để gửi tin nhắn (Shift+Enter để xuống dòng nếu là textarea)
+        messageInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 sendCurrentMessage();
             }
         });
+
+        chatControlsBound = true;
     }
 
     if (fileInput) {
@@ -163,7 +217,20 @@ function sendCurrentMessage() {
     if (!messageInput) return;
 
     const content = messageInput.value.trim();
-    if (content && stompClient && activeConsultationId) {
+    if (!content) return;
+
+    if (!activeConsultationId) {
+        alert('Chưa chọn cuộc hội thoại tư vấn nào.');
+        return;
+    }
+
+    if (!stompClient || !stompClient.connected) {
+        alert('Máy chủ chat đang kết nối lại, vui lòng thử lại sau vài giây!');
+        reconnectChat();
+        return;
+    }
+
+    try {
         const chatMessage = {
             consultationId: activeConsultationId,
             senderId: currentChatUser.id,
@@ -178,6 +245,10 @@ function sendCurrentMessage() {
         stompClient.send("/app/chat.sendMessage", {}, JSON.stringify(chatMessage));
         messageInput.value = '';
         messageInput.focus();
+    } catch (err) {
+        console.error('Lỗi khi gửi tin nhắn qua WebSocket:', err);
+        alert('Gửi tin nhắn thất bại. Đang thử kết nối lại!');
+        reconnectChat();
     }
 }
 
@@ -187,6 +258,12 @@ function sendCurrentMessage() {
 function uploadChatFileAndSend() {
     const fileInput = document.getElementById('chatFileInput');
     if (!fileInput || !fileInput.files[0] || !activeConsultationId) return;
+
+    if (!stompClient || !stompClient.connected) {
+        alert('Máy chủ chat đang kết nối lại, vui lòng thử lại sau vài giây!');
+        reconnectChat();
+        return;
+    }
 
     const file = fileInput.files[0];
     const maxSizeBytes = 25 * 1024 * 1024; // 25MB
@@ -253,24 +330,39 @@ function displayMessage(message, currentUserId) {
         mediaHtml = `<div class="mt-2"><a href="${message.mediaUrl}" target="_blank"><img src="${message.mediaUrl}" class="message-image" alt="Đính kèm"></a></div>`;
     }
 
-    const timeStr = new Date(message.sentAt || new Date()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    let timeStr = '';
+    try {
+        if (Array.isArray(message.sentAt)) {
+            const [y, m, d, h, min] = message.sentAt;
+            const dateObj = new Date(y, (m || 1) - 1, d || 1, h || 0, min || 0);
+            timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } else if (message.sentAt) {
+            timeStr = new Date(message.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } else {
+            timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+    } catch (e) {
+        timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
     const avatarUrl = message.senderAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150';
 
     // Tạo Role Badge
     let roleBadgeHtml = '';
-    if (message.senderRole === 'ROLE_ADMIN') {
+    const role = message.senderRole || '';
+    if (role === 'ROLE_ADMIN' || role === 'ADMIN') {
         roleBadgeHtml = `<span class="badge-role-admin ms-1"><i class="bi bi-shield-lock-fill me-1"></i>Admin</span>`;
-    } else if (message.senderRole === 'ROLE_LECTURER') {
+    } else if (role === 'ROLE_LECTURER' || role === 'LECTURER') {
         roleBadgeHtml = `<span class="badge-role-lecturer ms-1"><i class="bi bi-mortarboard-fill me-1"></i>Giảng viên</span>`;
-    } else if (message.senderRole === 'ROLE_STUDENT') {
+    } else if (role === 'ROLE_STUDENT' || role === 'STUDENT') {
         roleBadgeHtml = `<span class="badge-role-student ms-1"><i class="bi bi-person-fill me-1"></i>Sinh viên</span>`;
     }
 
     itemDiv.innerHTML = `
-        <img src="${avatarUrl}" class="avatar-circle" alt="${message.senderName || 'Avatar'}">
+        <img src="${avatarUrl}" class="avatar-circle" alt="${escapeHtml(message.senderName || 'Avatar')}">
         <div>
             <div class="small text-muted mb-1 ${isOutgoing ? 'text-end' : ''}">
-                <strong>${message.senderName || 'Người dùng'}</strong>
+                <strong>${escapeHtml(message.senderName || 'Người dùng')}</strong>
                 ${roleBadgeHtml}
             </div>
             <div class="message-bubble">
@@ -324,6 +416,7 @@ function bindSearchFilter() {
  * Thoát các ký tự HTML nguy hiểm để chống XSS
  */
 function escapeHtml(text) {
+    if (!text) return '';
     const map = {
         '&': '&amp;',
         '<': '&lt;',
@@ -331,7 +424,7 @@ function escapeHtml(text) {
         '"': '&quot;',
         "'": '&#039;'
     };
-    return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+    return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
 }
 
 /**
@@ -366,4 +459,3 @@ function hideTypingIndicator() {
         indicator.remove();
     }
 }
-

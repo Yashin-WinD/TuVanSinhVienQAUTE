@@ -78,8 +78,11 @@
                             <h5 class="fw-bold text-primary mb-3"><i class="bi bi-plus-circle me-1"></i>Đặt Lịch Hẹn Mới</h5>
                             <form th:action="@{/lecturer/schedule}" th:object="${appointmentDto}" method="post">
                                 <div class="mb-3">
-                                    <label class="form-label fw-semibold">Mã phiếu tư vấn</label>
-                                    <input type="number" class="form-control" th:field="*{consultationId}" placeholder="vd: 1" required>
+                                    <label class="form-label fw-semibold">Phiếu tư vấn</label>
+                                    <input type="number" class="form-control" list="lecturerRequestList" th:field="*{consultationId}" placeholder="Chọn hoặc nhập mã phiếu (vd: 1)" required>
+                                    <datalist id="lecturerRequestList" th:if="${lecturerRequests != null}">
+                                        <option th:each="req : ${lecturerRequests}" th:value="${req.id}" th:text="${'#' + req.id + ' - ' + req.student.fullName + ': ' + req.title}"></option>
+                                    </datalist>
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label fw-semibold">Thời gian hẹn</label>

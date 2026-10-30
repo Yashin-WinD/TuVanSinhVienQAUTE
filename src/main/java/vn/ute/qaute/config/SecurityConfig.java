@@ -63,16 +63,18 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             .csrf(csrf -> csrf.disable())
+            .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
             .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 // Công khai tài nguyên tĩnh và tệp tin tải lên
                 .requestMatchers("/css/**", "/js/**", "/images/**", "/uploads/**", "/webjars/**", "/favicon.ico").permitAll()
                 // Công khai các trang xem chung và xác thực
-                .requestMatchers("/", "/faq", "/documents/**", "/about", "/login", "/register", "/logout", "/forgot-password", "/reset-password").permitAll()
-                .requestMatchers("/api/v1/auth/**", "/api/v1/upload/**").permitAll()
+                .requestMatchers("/", "/faq", "/faq/**", "/documents/**", "/about", "/login", "/register", "/logout", "/forgot-password", "/reset-password").permitAll()
+                .requestMatchers("/api/v1/auth/**").permitAll()
+                .requestMatchers("/api/v1/upload/**").authenticated()
                 // WebSocket endpoint
-                .requestMatchers("/ws-qaute/**").permitAll()
+                .requestMatchers("/ws-qaute", "/ws-qaute/**").permitAll()
                 // Phân quyền theo vai trò
                 .requestMatchers("/student/**").hasRole("STUDENT")
                 .requestMatchers("/lecturer/**").hasRole("LECTURER")

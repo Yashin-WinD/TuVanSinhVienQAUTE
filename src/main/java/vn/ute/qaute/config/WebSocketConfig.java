@@ -22,7 +22,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        // Đăng ký endpoint websocket STOMP và bật SockJS dự phòng
+        // Đăng ký endpoint websocket STOMP (hỗ trợ cả kết nối WebSocket thuần và SockJS dự phòng)
+        registry.addEndpoint("/ws-qaute")
+                .setAllowedOriginPatterns("*");
         registry.addEndpoint("/ws-qaute")
                 .setAllowedOriginPatterns("*")
                 .withSockJS();

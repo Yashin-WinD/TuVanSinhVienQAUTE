@@ -66,6 +66,7 @@ public class StudentController {
     @PostMapping("/requests/create")
     public String handleCreateRequest(@ModelAttribute("createDto") CreateConsultationDto dto,
                                       @RequestParam(value = "evidenceFile", required = false) MultipartFile evidenceFile,
+                                      @RequestParam(value = "redirectChat", required = false) Boolean redirectChat,
                                       RedirectAttributes redirectAttributes) {
         try {
             User student = userService.getCurrentUser();
@@ -80,9 +81,15 @@ public class StudentController {
 
             ConsultationRequest created = consultationService.createRequest(dto, student);
             redirectAttributes.addFlashAttribute("successMessage", "Gửi câu hỏi tư vấn thành công! Mã phiếu: #" + created.getId());
+            if (Boolean.TRUE.equals(redirectChat)) {
+                return "redirect:/student/chat?id=" + created.getId();
+            }
             return "redirect:/student/requests/" + created.getId();
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Lỗi gửi yêu cầu: " + e.getMessage());
+            if (Boolean.TRUE.equals(redirectChat)) {
+                return "redirect:/student/chat";
+            }
             return "redirect:/student/requests/create";
         }
     }
@@ -142,8 +149,13 @@ public class StudentController {
     }
 
     @GetMapping("/requests/{id}")
-    public String requestDetail(@PathVariable("id") Long id, Model model) {
+    public String requestDetail(@PathVariable("id") Long id, Model model, RedirectAttributes redirectAttributes) {
+        User student = userService.getCurrentUser();
         ConsultationRequest req = consultationService.getRequestById(id);
+        if (req.getStudent() == null || !req.getStudent().getId().equals(student.getId())) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Bạn không có quyền xem phiếu tư vấn này!");
+            return "redirect:/student/requests";
+        }
         model.addAttribute("request", req);
         model.addAttribute("feedbackDto", new FeedbackDto());
         return "student/request-detail";

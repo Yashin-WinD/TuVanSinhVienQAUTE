@@ -25,7 +25,7 @@
 
                     <form th:action="@{/login}" th:object="${loginRequest}" method="post">
                         <div class="mb-3">
-                            <label class="form-label fw-semibold">Tên đăng nhập / MSSV / MSGV</label>
+                            <label class="form-label fw-semibold">Tên đăng nhập</label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="bi bi-person"></i></span>
                                 <input type="text" class="form-control" th:field="*{username}"

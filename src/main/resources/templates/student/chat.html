@@ -172,6 +172,7 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content shadow border-0">
                 <form th:action="@{/student/requests/create}" method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="redirectChat" value="true">
                     <div class="modal-header bg-primary text-white">
                         <h5 class="modal-title fw-bold" id="newChatModalLabel">
                             <i class="bi bi-question-diamond-fill me-2"></i>Bắt Đầu Phiên Tư Vấn Mới
@@ -227,9 +228,19 @@
         const currentUserAvatar = /*[[${currentUser.avatarUrl}]]*/ '';
         const currentUserRole = /*[[${currentUser.role.name()}]]*/ 'ROLE_STUDENT';
 
-        document.addEventListener('DOMContentLoaded', function () {
-            initChat(consultationId, currentUserId, currentUserName, currentUserAvatar, currentUserRole);
-        });
+        function startChat() {
+            if (typeof initChat === 'function') {
+                initChat(consultationId, currentUserId, currentUserName, currentUserAvatar, currentUserRole);
+            } else {
+                setTimeout(startChat, 150);
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', startChat);
+        } else {
+            startChat();
+        }
         /*]]>*/
     </script>
 </body>

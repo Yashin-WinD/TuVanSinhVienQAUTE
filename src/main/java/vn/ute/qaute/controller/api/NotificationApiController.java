@@ -36,7 +36,10 @@ public class NotificationApiController {
 
     @PutMapping("/{id}/read")
     public ResponseEntity<ApiResponse<Void>> markAsRead(@PathVariable("id") Long id) {
-        notificationService.markAsRead(id);
+        User currentUser = userService.getCurrentUser();
+        if (currentUser != null) {
+            notificationService.markAsRead(id, currentUser.getId());
+        }
         return ResponseEntity.ok(ApiResponse.ok("Đã đánh dấu đã đọc"));
     }
 }

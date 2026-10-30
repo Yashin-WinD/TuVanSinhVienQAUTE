@@ -71,8 +71,9 @@
                                 </button>
                             </h2>
                             <div th:id="'collapse' + ${faq.id}" class="accordion-collapse collapse" 
+                                 th:attr="data-faq-id=${faq.id}"
                                  th:classappend="${iterStat.index == 0 ? 'show' : ''}" data-bs-parent="#accordionFaq">
-                                <div class="accordion-body text-secondary" th:utext="${faq.answer}">
+                                <div class="accordion-body text-secondary" style="white-space: pre-line;" th:text="${faq.answer}">
                                     Câu trả lời chi tiết
                                 </div>
                             </div>
@@ -88,5 +89,18 @@
 
     <div th:replace="~{fragments/footer :: footer}"></div>
     <div th:replace="~{fragments/scripts :: scripts}"></div>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            document.querySelectorAll("#accordionFaq .accordion-collapse").forEach(function (el) {
+                el.addEventListener("shown.bs.collapse", function () {
+                    const faqId = el.getAttribute("data-faq-id");
+                    if (faqId && !el.getAttribute("data-viewed")) {
+                        el.setAttribute("data-viewed", "true");
+                        fetch("/faq/" + faqId + "/view", { method: "POST" }).catch(function () {});
+                    }
+                });
+            });
+        });
+    </script>
 </body>
 </html>

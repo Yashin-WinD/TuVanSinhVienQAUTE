@@ -98,6 +98,11 @@ public class LecturerController {
     public String claimRequest(@PathVariable("id") Long id, RedirectAttributes redirectAttributes) {
         try {
             User lecturer = userService.getCurrentUser();
+            ConsultationRequest req = consultationService.getRequestById(id);
+            if (req.getLecturer() != null && !req.getLecturer().getId().equals(lecturer.getId())) {
+                redirectAttributes.addFlashAttribute("errorMessage", "Phiếu tư vấn này đã được giảng viên khác tiếp nhận!");
+                return "redirect:/lecturer/requests/pending";
+            }
             consultationService.assignLecturer(id, lecturer.getId());
             redirectAttributes.addFlashAttribute("successMessage", "Bạn đã tiếp nhận phiếu tư vấn #" + id);
             return "redirect:/lecturer/requests/" + id + "/answer";
@@ -223,6 +228,7 @@ public class LecturerController {
     public String schedulePage(@RequestParam(value = "status", required = false) vn.ute.qaute.entity.enums.AppointmentStatus status, Model model) {
         User lecturer = userService.getCurrentUser();
         model.addAttribute("appointments", appointmentService.getAppointmentsByLecturerAndStatus(lecturer.getId(), status));
+        model.addAttribute("lecturerRequests", consultationService.getRequestsByLecturer(lecturer.getId(), PageRequest.of(0, 50)).getContent());
         model.addAttribute("statuses", vn.ute.qaute.entity.enums.AppointmentStatus.values());
         model.addAttribute("selectedStatus", status);
         model.addAttribute("appointmentDto", new CreateAppointmentDto());

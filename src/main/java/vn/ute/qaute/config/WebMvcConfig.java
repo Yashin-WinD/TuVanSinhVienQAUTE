@@ -14,11 +14,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // Tài nguyên tĩnh mặc định trong classpath
-        registry.addResourceHandler("/**")
-                .addResourceLocations("classpath:/static/");
-
-        // Tài nguyên người dùng tải lên lưu trữ cục bộ
+        // Tài nguyên người dùng tải lên lưu trữ cục bộ (Ưu tiên ánh xạ trước)
         Path uploadDir = Paths.get("uploads").toAbsolutePath().normalize();
         if (!Files.exists(uploadDir)) {
             try {
@@ -32,5 +28,9 @@ public class WebMvcConfig implements WebMvcConfigurer {
         }
         registry.addResourceHandler("/uploads/**")
                 .addResourceLocations(uploadPathUri);
+
+        // Tài nguyên tĩnh mặc định trong classpath
+        registry.addResourceHandler("/**")
+                .addResourceLocations("classpath:/static/");
     }
 }

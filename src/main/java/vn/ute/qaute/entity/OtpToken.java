@@ -17,20 +17,36 @@ public class OtpToken {
     @Column(nullable = false, length = 10)
     private String otp;
 
+    @Column(length = 100)
+    private String purpose;
+
     @Column(name = "expiry_time", nullable = false)
     private LocalDateTime expiryTime;
 
     @Column(name = "is_used")
     private Boolean isUsed = false;
 
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
     public OtpToken() {
     }
 
     public OtpToken(String email, String otp, LocalDateTime expiryTime) {
+        this(email, otp, null, expiryTime);
+    }
+
+    public OtpToken(String email, String otp, String purpose, LocalDateTime expiryTime) {
         this.email = email;
         this.otp = otp;
+        this.purpose = purpose;
         this.expiryTime = expiryTime;
         this.isUsed = false;
+    }
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
     }
 
     public boolean isExpired() {

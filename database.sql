@@ -162,6 +162,7 @@ CREATE TABLE `otp_tokens` (
     `email` VARCHAR(150) NOT NULL,
     `otp` VARCHAR(10) NOT NULL,
     `purpose` VARCHAR(100),
+    `is_used` BOOLEAN DEFAULT FALSE,
     `expiry_time` DATETIME NOT NULL,
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -232,3 +233,10 @@ INSERT INTO `faqs` (`id`, `question`, `answer`, `field_id`, `view_count`, `is_pu
 -- 5. Thêm Phiếu tư vấn mẫu
 INSERT INTO `consultation_requests` (`id`, `title`, `content`, `attachment_urls`, `student_id`, `lecturer_id`, `field_id`, `status`, `priority`, `created_at`) VALUES
 (1, 'Hỏi về thủ tục phúc khảo điểm rèn luyện học kỳ 2', 'Em chào thầy cô, học kỳ vừa qua em có tham gia chiến dịch tình nguyện Mùa hè xanh nhưng chưa thấy được cộng 10 điểm vào mục rèn luyện cộng đồng. Nhờ thầy cô kiểm tra giúp em ạ.', NULL, 4, 3, 2, 'ASSIGNED', 'MEDIUM', NOW() - INTERVAL 1 DAY);
+
+-- 6. Thêm Văn bản & Biểu mẫu mẫu
+INSERT INTO `documents` (`id`, `title`, `description`, `file_url`, `file_name`, `file_type`, `file_size`, `category`, `uploader_id`, `download_count`) VALUES
+(1, 'Quy chế đào tạo học chế tín chỉ trình độ đại học', 'Toàn văn quy chế đào tạo, đăng ký môn học, rút môn, xét điều kiện tốt nghiệp tại Trường ĐH Sư phạm Kỹ thuật TP.HCM.', '/uploads/documents/570ea0bd-f278-48e9-9331-27a3d723c1c4.pdf', 'Quy_che_dao_tao_tin_chi.pdf', 'PDF', 2456000, 'TRAINING_REGULATION', 1, 0),
+(2, 'Mẫu đơn xin hoãn thi / kiểm tra kết thúc học phần', 'Dành cho sinh viên gặp lý do bất khả kháng (ốm đau, tai nạn, việc gia đình cấp thiết) kèm minh chứng hợp lệ.', '/uploads/documents/7db2ee23-dd0c-46a4-8a70-b037dab27e8e.pdf', 'Mau_don_xin_hoan_thi.pdf', 'PDF', 315000, 'STUDENT_FORM', 1, 0),
+(3, 'Quy định xét cấp Học bổng khuyến khích học tập', 'Hướng dẫn chi tiết tiêu chuẩn xét học bổng khuyến khích học tập học kỳ chính và học bổng doanh nghiệp.', '/uploads/documents/edb09dec-ee20-4337-a9d9-93dc866e8698.pdf', 'Quy_dinh_hoc_bong_KKHT.pdf', 'PDF', 1120000, 'SCHOLARSHIP', 1, 0),
+(4, 'Mẫu phiếu đánh giá điểm rèn luyện sinh viên', 'Biểu mẫu tự đánh giá và thang điểm chi tiết cho các hoạt động ngoại khóa, đoàn hội và phong trào sinh viên.', '/uploads/documents/570ea0bd-f278-48e9-9331-27a3d723c1c4.pdf', 'Mau_danh_gia_diem_ren_luyen.pdf', 'PDF', 542000, 'TRAINING_POINT', 1, 0);
